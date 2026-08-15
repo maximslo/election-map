@@ -47,11 +47,24 @@
 	--bop-transition-duration: 600ms;
 	--bop-reveal-duration: 600ms;
 	--bop-transition-easing: cubic-bezier(0.3, 0.9, 0.9, 1);
+
+	/* jakubantalik/transitions.dev — 02-number-pop-in, renamed onto this file's --bop- tokens. */
+	--bop-digit-duration: 500ms;
+	--bop-digit-distance: 8px;
+	--bop-digit-stagger: 70ms;
+	--bop-digit-blur: 2px;
+	--bop-digit-easing: cubic-bezier(0.34, 1.45, 0.64, 1);
+	--bop-digit-direction-x: 0;
+	--bop-digit-direction-y: 1;
+
+	/* barvian/number-flow — vertical edge fade on the sliding-digit wheel. */
+	--bop-slot-mask-size: 8px;
 }
 
 @media (prefers-reduced-motion: reduce) {
 	:root {
 		--bop-transition-duration: 0ms;
 		--bop-reveal-duration: 0ms;
+		--bop-digit-duration: 0ms;
 	}
 }

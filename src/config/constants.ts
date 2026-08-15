@@ -12,6 +12,27 @@ export const DATA_ATTRIBUTE = {
 	counter: 'data-counter',
 	counterTarget: 'data-counter-target',
 	segment: 'data-bar-segment',
+	numberAnimationMode: 'data-number-animation-mode',
+	numberAnimationSelector: 'data-number-animation-selector',
+	digitAnimating: 'data-digit-animating',
+	digitStagger: 'data-digit-stagger',
+	currentValue: 'data-current-value',
+} as const;
+
+export const NUMBER_ANIMATION_MODE = {
+	countUp: 'count-up',
+	popIn: 'pop-in',
+	slide: 'slide',
+} as const;
+
+export type NumberAnimationMode = (typeof NUMBER_ANIMATION_MODE)[keyof typeof NUMBER_ANIMATION_MODE];
+
+export const NUMBER_ANIMATION_INPUT_NAME = 'number-animation-mode';
+
+// Mirrors the [data-digit-stagger="1"|"2"] selectors in BalanceOfPowerBar.astro's stylesheet.
+export const DIGIT_STAGGER = {
+	first: '1',
+	second: '2',
 } as const;
 
 export const CUSTOM_PROPERTY = {

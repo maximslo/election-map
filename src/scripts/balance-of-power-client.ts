@@ -1,12 +1,17 @@
 import {
 	CUSTOM_PROPERTY,
 	DATA_ATTRIBUTE,
+	DIGIT_STAGGER,
 	KEY,
 	MILLISECONDS_PER_SECOND,
+	NUMBER_ANIMATION_INPUT_NAME,
+	NUMBER_ANIMATION_MODE,
+	type NumberAnimationMode,
 } from '../config/constants';
 import { createEasing, type EasingFunction } from '../lib/cubic-bezier';
 
 const FALLBACK_EASING = 'cubic-bezier(0, 0, 0.58, 1)';
+const DIGIT_WHEEL_SIZE = 10;
 
 /** What a panel is showing right now, so the next one can carry on from it. */
 type PanelSnapshot = {
@@ -14,7 +19,14 @@ type PanelSnapshot = {
 	segmentWidths: number[];
 };
 
+/** One digit place's wheel: ten stacked digit spans, and the place value (1, 10, 100, ...) it represents. */
+type DigitSlot = {
+	digitSpans: HTMLElement[];
+	place: number;
+};
+
 const pendingCountUps = new WeakMap<HTMLElement, number>();
+const pendingSlides = new WeakMap<HTMLElement, number>();
 
 const countersOf = (panel: HTMLElement): HTMLElement[] =>
 	Array.from(panel.querySelectorAll(`[${DATA_ATTRIBUTE.counter}]`));
@@ -51,17 +63,21 @@ const countTo = (
 
 	if (!(durationMs > 0)) {
 		element.textContent = String(to);
+		element.setAttribute(DATA_ATTRIBUTE.currentValue, String(to));
 		return;
 	}
 
 	// Take the starting value now: waiting for the first frame would flash the server-rendered one.
 	element.textContent = String(Math.round(from));
+	element.setAttribute(DATA_ATTRIBUTE.currentValue, String(Math.round(from)));
 
 	const startedAt = performance.now();
 
 	const step = (now: number): void => {
 		const progress = Math.min((now - startedAt) / durationMs, 1);
-		element.textContent = String(Math.round(from + (to - from) * ease(progress)));
+		const current = Math.round(from + (to - from) * ease(progress));
+		element.textContent = String(current);
+		element.setAttribute(DATA_ATTRIBUTE.currentValue, String(current));
 
 		if (progress < 1) {
 			pendingCountUps.set(element, requestAnimationFrame(step));
@@ -92,24 +108,185 @@ const growSegment = (
 	});
 };
 
+// jakubantalik/transitions.dev — 02-number-pop-in: each digit re-enters independently,
+// with the last two staggered, instead of the value tweening through every step between.
+const popInDigits = (element: HTMLElement, value: number): void => {
+	element.removeAttribute(DATA_ATTRIBUTE.digitAnimating);
+
+	const characters = String(value).split('');
+	const fragment = document.createDocumentFragment();
+
+	characters.forEach((character, index) => {
+		const digit = document.createElement('span');
+		digit.className = 'bar__digit';
+		digit.textContent = character;
+
+		if (index === characters.length - 2) {
+			digit.setAttribute(DATA_ATTRIBUTE.digitStagger, DIGIT_STAGGER.first);
+		} else if (index === characters.length - 1) {
+			digit.setAttribute(DATA_ATTRIBUTE.digitStagger, DIGIT_STAGGER.second);
+		}
+
+		fragment.append(digit);
+	});
+
+	element.replaceChildren(fragment);
+	void element.offsetWidth; // force a reflow so re-adding the trigger attribute replays the animation
+	element.setAttribute(DATA_ATTRIBUTE.digitAnimating, '');
+	element.setAttribute(DATA_ATTRIBUTE.currentValue, String(value));
+};
+
+// motion-primitives/sliding-number, ported off Framer's spring onto this file's own rAF tween.
+// One slot per digit place; each holds all ten digits, and a single "reel position" per slot
+// (fromDigit easing to toDigit) decides which one is centered — the same math the source uses
+// to keep every stacked digit positioned sensibly relative to whichever one is currently showing.
+const buildDigitSlots = (counter: HTMLElement, digitCount: number): DigitSlot[] => {
+	const fragment = document.createDocumentFragment();
+	const slots: DigitSlot[] = [];
+
+	for (let position = 0; position < digitCount; position += 1) {
+		const place = 10 ** (digitCount - position - 1);
+		const slot = document.createElement('span');
+		slot.className = 'bar__slot';
+
+		const spacer = document.createElement('span');
+		spacer.className = 'bar__slot-spacer';
+		spacer.setAttribute('aria-hidden', 'true');
+		spacer.textContent = '0';
+		slot.append(spacer);
+
+		const digitSpans: HTMLElement[] = [];
+
+		for (let digit = 0; digit < DIGIT_WHEEL_SIZE; digit += 1) {
+			const digitSpan = document.createElement('span');
+			digitSpan.className = 'bar__slot-digit';
+			digitSpan.textContent = String(digit);
+			slot.append(digitSpan);
+			digitSpans.push(digitSpan);
+		}
+
+		fragment.append(slot);
+		slots.push({ digitSpans, place });
+	}
+
+	counter.replaceChildren(fragment);
+
+	return slots;
+};
+
+const positionDigitSlot = (digitSpans: HTMLElement[], reelPosition: number, slotHeight: number): void => {
+	const wheelPosition = ((reelPosition % DIGIT_WHEEL_SIZE) + DIGIT_WHEEL_SIZE) % DIGIT_WHEEL_SIZE;
+
+	digitSpans.forEach((digitSpan, digit) => {
+		let offset = (DIGIT_WHEEL_SIZE + digit - wheelPosition) % DIGIT_WHEEL_SIZE;
+
+		if (offset > DIGIT_WHEEL_SIZE / 2) {
+			offset -= DIGIT_WHEEL_SIZE;
+		}
+
+		digitSpan.style.transform = `translateY(${offset * slotHeight}px)`;
+	});
+};
+
+const slideDigits = (
+	element: HTMLElement,
+	from: number,
+	to: number,
+	durationMs: number,
+	ease: EasingFunction,
+): void => {
+	const pending = pendingSlides.get(element);
+
+	if (pending !== undefined) {
+		cancelAnimationFrame(pending);
+	}
+
+	const slots = buildDigitSlots(element, String(to).length);
+	const slotHeight = slots[0]?.digitSpans[0]?.getBoundingClientRect().height ?? 0;
+
+	const applyProgress = (linearProgress: number): void => {
+		const easedProgress = ease(linearProgress);
+
+		element.setAttribute(
+			DATA_ATTRIBUTE.currentValue,
+			String(Math.round(from + (to - from) * easedProgress)),
+		);
+
+		slots.forEach(({ digitSpans, place }) => {
+			const fromDigit = Math.floor(from / place) % DIGIT_WHEEL_SIZE;
+			const toDigit = Math.floor(to / place) % DIGIT_WHEEL_SIZE;
+			const reelPosition = fromDigit + (toDigit - fromDigit) * easedProgress;
+
+			positionDigitSlot(digitSpans, reelPosition, slotHeight);
+		});
+	};
+
+	if (!(durationMs > 0)) {
+		applyProgress(1);
+		return;
+	}
+
+	applyProgress(0);
+
+	const startedAt = performance.now();
+
+	const step = (now: number): void => {
+		const progress = Math.min((now - startedAt) / durationMs, 1);
+		applyProgress(progress);
+
+		if (progress < 1) {
+			pendingSlides.set(element, requestAnimationFrame(step));
+		}
+	};
+
+	pendingSlides.set(element, requestAnimationFrame(step));
+};
+
 const snapshotPanel = (panel: HTMLElement): PanelSnapshot => ({
-	counts: countersOf(panel).map((counter) => Number(counter.textContent)),
+	// Slide mode stacks all ten digits per place, so textContent is garbled there — the
+	// currently-shown value is tracked separately by every mode instead.
+	counts: countersOf(panel).map((counter) =>
+		Number(counter.getAttribute(DATA_ATTRIBUTE.currentValue) ?? counter.textContent),
+	),
 	segmentWidths: segmentsOf(panel).map((segment) => segment.getBoundingClientRect().width),
 });
 
-const revealPanel = (panel: HTMLElement, previous: PanelSnapshot | null): void => {
+const revealPanel = (
+	panel: HTMLElement,
+	previous: PanelSnapshot | null,
+	mode: NumberAnimationMode,
+): void => {
 	const durationMs = readDurationMs(panel);
 	const easing = readEasing(panel);
 	const ease = createEasing(easing);
 
 	countersOf(panel).forEach((counter, index) => {
 		const target = Number(counter.getAttribute(DATA_ATTRIBUTE.counterTarget));
-		countTo(counter, previous?.counts[index] ?? 0, target, durationMs, ease);
+
+		const from = previous?.counts[index] ?? 0;
+
+		if (mode === NUMBER_ANIMATION_MODE.popIn) {
+			popInDigits(counter, target);
+		} else if (mode === NUMBER_ANIMATION_MODE.slide) {
+			slideDigits(counter, from, target, durationMs, ease);
+		} else {
+			countTo(counter, from, target, durationMs, ease);
+		}
 	});
 
 	segmentsOf(panel).forEach((segment, index) => {
 		growSegment(segment, previous?.segmentWidths[index] ?? 0, durationMs, easing);
 	});
+};
+
+const readNumberAnimationMode = (root: HTMLElement): NumberAnimationMode => {
+	const value = root.getAttribute(DATA_ATTRIBUTE.numberAnimationMode);
+
+	if (value === NUMBER_ANIMATION_MODE.popIn || value === NUMBER_ANIMATION_MODE.slide) {
+		return value;
+	}
+
+	return NUMBER_ANIMATION_MODE.countUp;
 };
 
 const connectSwitcher = (root: HTMLElement): void => {
@@ -139,7 +316,7 @@ const connectSwitcher = (root: HTMLElement): void => {
 			panel.hidden = panelIndex !== index;
 		});
 
-		revealPanel(panels[index], previous);
+		revealPanel(panels[index], previous, readNumberAnimationMode(root));
 		hasRevealed = true;
 
 		if (moveFocus) {
@@ -181,8 +358,40 @@ const connectSwitcher = (root: HTMLElement): void => {
 	activate(initialIndex, false);
 };
 
+// Lets the number-animation selector, which lives outside the widget, replay the
+// currently visible panel in the newly chosen mode without waiting for a tab switch.
+const connectNumberAnimationSelector = (): void => {
+	const selector = document.querySelector<HTMLElement>(
+		`[${DATA_ATTRIBUTE.numberAnimationSelector}]`,
+	);
+	const root = document.querySelector<HTMLElement>(`[${DATA_ATTRIBUTE.root}]`);
+
+	if (!selector || !root) {
+		return;
+	}
+
+	selector.addEventListener('change', (event) => {
+		const input = event.target;
+
+		if (!(input instanceof HTMLInputElement) || input.name !== NUMBER_ANIMATION_INPUT_NAME) {
+			return;
+		}
+
+		root.setAttribute(DATA_ATTRIBUTE.numberAnimationMode, input.value);
+
+		const visiblePanel = root.querySelector<HTMLElement>(
+			`[${DATA_ATTRIBUTE.panel}]:not([hidden])`,
+		);
+
+		if (visiblePanel) {
+			revealPanel(visiblePanel, null, readNumberAnimationMode(root));
+		}
+	});
+};
+
 export const initBalanceOfPower = (): void => {
 	const roots = document.querySelectorAll<HTMLElement>(`[${DATA_ATTRIBUTE.root}]`);
 
 	roots.forEach(connectSwitcher);
+	connectNumberAnimationSelector();
 };

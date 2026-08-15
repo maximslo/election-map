@@ -1,5 +1,6 @@
 ---
 import BalanceOfPower from '../components/BalanceOfPower.astro';
+import NumberAnimationSelector from '../components/NumberAnimationSelector.astro';
 import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 ---
 
@@ -25,7 +26,10 @@ import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 	</head>
 	<body>
 		<main>
-			<BalanceOfPower />
+			<div class="demo">
+				<NumberAnimationSelector />
+				<BalanceOfPower />
+			</div>
 		</main>
 
 		<style>
@@ -38,6 +42,14 @@ import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 				display: flex;
 				justify-content: center;
 				padding: 40px 16px;
+			}
+
+			.demo {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				width: 100%;
+				max-width: var(--bop-width);
 			}
 		</style>
 	</body>

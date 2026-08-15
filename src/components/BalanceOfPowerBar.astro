@@ -81,6 +81,8 @@ const summary = [
 	}
 
 	.bar__count {
+		display: inline-flex;
+		align-items: baseline;
 		font-family: var(--bop-font-family);
 		font-size: var(--bop-count-font-size);
 		font-weight: var(--bop-count-weight);
@@ -94,12 +96,85 @@ const summary = [
 
 	.bar__count--democrat {
 		color: var(--bop-color-dem);
-		text-align: right;
+		justify-content: flex-end;
 	}
 
 	.bar__count--republican {
 		color: var(--bop-color-rep);
-		text-align: left;
+		justify-content: flex-start;
+	}
+
+	/* :global — these digit spans are created client-side via document.createElement, so
+	   they never receive the data-astro-cid-* attribute Astro appends to scoped selectors. */
+	:global(.bar__digit) {
+		display: inline-block;
+		will-change: transform, opacity, filter;
+	}
+
+	@keyframes bar-digit-pop-in {
+		from {
+			transform: translate(
+				calc(var(--bop-digit-distance) * var(--bop-digit-direction-x)),
+				calc(var(--bop-digit-distance) * var(--bop-digit-direction-y))
+			);
+			opacity: 0;
+			filter: blur(var(--bop-digit-blur));
+		}
+
+		to {
+			transform: translate(0, 0);
+			opacity: 1;
+			filter: blur(0);
+		}
+	}
+
+	:global(.bar__count[data-digit-animating] .bar__digit) {
+		animation: bar-digit-pop-in var(--bop-digit-duration) var(--bop-digit-easing) both;
+	}
+
+	:global(.bar__count[data-digit-animating] .bar__digit[data-digit-stagger='1']) {
+		animation-delay: var(--bop-digit-stagger);
+	}
+
+	:global(.bar__count[data-digit-animating] .bar__digit[data-digit-stagger='2']) {
+		animation-delay: calc(var(--bop-digit-stagger) * 2);
+	}
+
+	/* motion-primitives/sliding-number, ported to plain rAF: one slot per digit place, each
+	   holding all ten digits stacked; a single "reel position" per slot decides which one shows. */
+	:global(.bar__slot) {
+		position: relative;
+		display: inline-block;
+		width: 1ch;
+		overflow: hidden;
+		/* barvian/number-flow — fades digits to transparent as they scroll past the clipped
+		   edge, instead of cutting them off hard. -webkit- prefix is required by Safari. */
+		mask-image: linear-gradient(
+			to bottom,
+			transparent 0,
+			#000 var(--bop-slot-mask-size),
+			#000 calc(100% - var(--bop-slot-mask-size)),
+			transparent 100%
+		);
+		-webkit-mask-image: linear-gradient(
+			to bottom,
+			transparent 0,
+			#000 var(--bop-slot-mask-size),
+			#000 calc(100% - var(--bop-slot-mask-size)),
+			transparent 100%
+		);
+	}
+
+	:global(.bar__slot-spacer) {
+		visibility: hidden;
+	}
+
+	:global(.bar__slot-digit) {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
 	.bar__track {

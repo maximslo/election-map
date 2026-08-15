@@ -1,0 +1,63 @@
+---
+import {
+	DATA_ATTRIBUTE,
+	NUMBER_ANIMATION_INPUT_NAME,
+	NUMBER_ANIMATION_MODE,
+} from '../config/constants';
+
+const OPTIONS = [
+	{ value: NUMBER_ANIMATION_MODE.countUp, label: 'Count up' },
+	{ value: NUMBER_ANIMATION_MODE.popIn, label: 'Pop in' },
+	{ value: NUMBER_ANIMATION_MODE.slide, label: 'Slide' },
+] as const;
+---
+
+<fieldset class="number-animation" {...{ [DATA_ATTRIBUTE.numberAnimationSelector]: '' }}>
+	<legend class="number-animation__legend">Number animation</legend>
+	{
+		OPTIONS.map((option, index) => (
+			<label class="number-animation__option">
+				<input
+					type="radio"
+					name={NUMBER_ANIMATION_INPUT_NAME}
+					value={option.value}
+					checked={index === 0}
+				/>
+				{option.label}
+			</label>
+		))
+	}
+</fieldset>
+
+<style>
+	.number-animation {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		max-width: var(--bop-width);
+		margin: 0 0 16px;
+		padding: 0;
+		border: 0;
+		font-family: var(--bop-font-family);
+		font-size: 13px;
+	}
+
+	.number-animation__legend {
+		padding: 0;
+		font-weight: 600;
+		color: var(--bop-color-ink);
+	}
+
+	.number-animation__option {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		color: var(--bop-color-tab-idle-text);
+		cursor: pointer;
+	}
+
+	.number-animation__option:has(input:checked) {
+		color: var(--bop-color-ink);
+	}
+</style>
