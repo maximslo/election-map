@@ -1,0 +1,73 @@
+---
+import { CUSTOM_PROPERTY, DATA_ATTRIBUTE, DEFAULT_CHAMBER_ID } from '../config/constants';
+import { CHAMBERS, type Chamber } from '../data/chambers';
+import { widestCountDigits } from '../lib/balance-of-power';
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+import BalanceOfPowerBar from './BalanceOfPowerBar.astro';
+import ChamberSwitcher from './ChamberSwitcher.astro';
+
+type Props = {
+	activeId?: Chamber['id'];
+};
+
+const { activeId = DEFAULT_CHAMBER_ID } = Astro.props;
+
+const tabIdFor = (chamber: Chamber) => `chamber-tab-${chamber.id}`;
+const panelIdFor = (chamber: Chamber) => `chamber-panel-${chamber.id}`;
+---
+
+<section
+	class="balance"
+	aria-label="Balance of power"
+	style={{ [CUSTOM_PROPERTY.countDigits]: widestCountDigits(CHAMBERS) }}
+	{...{ [DATA_ATTRIBUTE.root]: '' }}
+>
+	<ChamberSwitcher chambers={CHAMBERS} activeId={activeId} tabIdFor={tabIdFor} panelIdFor={panelIdFor} />
+
+	{
+		CHAMBERS.map((chamber) => (
+			<div
+				class="balance__panel"
+				role="tabpanel"
+				id={panelIdFor(chamber)}
+				aria-labelledby={tabIdFor(chamber)}
+				hidden={chamber.id !== activeId}
+				{...{
+					[DATA_ATTRIBUTE.panel]: '',
+					[DATA_ATTRIBUTE.chamberId]: chamber.id,
+				}}
+			>
+				<BalanceOfPowerBar chamber={chamber} />
+			</div>
+		))
+	}
+</section>
+
+<script>
+	import { initBalanceOfPower } from '../scripts/balance-of-power-client';
+
+	initBalanceOfPower();
+</script>
+
+<style>
+	.balance,
+	.balance :global(*) {
+		box-sizing: border-box;
+	}
+
+	.balance {
+		width: 100%;
+		max-width: var(--bop-width);
+		font-family: var(--bop-font-family);
+	}
+
+	.balance__panel {
+		padding-top: var(--bop-switcher-gap);
+		padding-inline: var(--bop-bar-inline-padding);
+	}
+
+	.balance__panel[hidden] {
+		display: none;
+	}
+</style>

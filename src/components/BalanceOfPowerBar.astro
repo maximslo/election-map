@@ -1,0 +1,171 @@
+---
+import { CUSTOM_PROPERTY, DATA_ATTRIBUTE, PARTY_LABEL } from '../config/constants';
+import type { Chamber } from '../data/chambers';
+import { calculateBalanceOfPower } from '../lib/balance-of-power';
+
+type Props = {
+	chamber: Chamber;
+};
+
+const { chamber } = Astro.props;
+const { democratShare, republicanShare, thresholdPosition, undecidedCount } =
+	calculateBalanceOfPower(chamber);
+
+const summary = [
+	`Democrats ${chamber.democratCount}`,
+	`Republicans ${chamber.republicanCount}`,
+	`${undecidedCount} undecided of ${chamber.totalAtStake}`,
+	`${chamber.majorityThreshold} for a majority`,
+].join(', ');
+---
+
+<div
+	class="bar"
+	role="img"
+	aria-label={summary}
+	style={{
+		[CUSTOM_PROPERTY.democratShare]: democratShare,
+		[CUSTOM_PROPERTY.republicanShare]: republicanShare,
+		[CUSTOM_PROPERTY.thresholdPosition]: thresholdPosition,
+	}}
+>
+	<span
+		class="bar__count bar__count--democrat"
+		{...{
+			[DATA_ATTRIBUTE.counter]: '',
+			[DATA_ATTRIBUTE.counterTarget]: String(chamber.democratCount),
+		}}>{chamber.democratCount}</span
+	>
+
+	<div class="bar__track">
+		<span class="bar__party bar__party--democrat">{PARTY_LABEL.democrat}</span>
+		<span class="bar__party bar__party--republican">{PARTY_LABEL.republican}</span>
+		<span class="bar__segment bar__segment--democrat" {...{ [DATA_ATTRIBUTE.segment]: '' }}></span>
+		<span class="bar__segment bar__segment--republican" {...{ [DATA_ATTRIBUTE.segment]: '' }}
+		></span>
+		<span class="bar__threshold">
+			<span class="bar__threshold-label">{chamber.majorityThreshold}</span>
+		</span>
+	</div>
+
+	<span
+		class="bar__count bar__count--republican"
+		{...{
+			[DATA_ATTRIBUTE.counter]: '',
+			[DATA_ATTRIBUTE.counterTarget]: String(chamber.republicanCount),
+		}}>{chamber.republicanCount}</span
+	>
+</div>
+
+<style>
+	.bar {
+		/* The party labels, counts and threshold label all overflow the bar itself; the
+		   padding below reserves exactly the room the tallest of them needs. */
+		--bop-party-overhang: calc(var(--bop-party-font-size) + var(--bop-party-baseline-gap));
+		--bop-count-overhang: calc(
+			var(--bop-count-font-size) + var(--bop-count-baseline-offset) - var(--bop-bar-height)
+		);
+		--bop-threshold-underhang: calc(
+			var(--bop-threshold-overhang) + var(--bop-threshold-label-gap) +
+				var(--bop-threshold-font-size)
+		);
+
+		display: flex;
+		align-items: flex-end;
+		gap: var(--bop-bar-number-gap);
+		padding-top: max(0px, calc(var(--bop-party-overhang) - var(--bop-count-overhang)));
+		padding-bottom: max(
+			var(--bop-threshold-underhang),
+			calc(-1 * var(--bop-count-baseline-offset))
+		);
+	}
+
+	.bar__count {
+		font-family: var(--bop-font-family);
+		font-size: var(--bop-count-font-size);
+		font-weight: var(--bop-count-weight);
+		font-variant-numeric: tabular-nums;
+		line-height: 1;
+		margin-bottom: var(--bop-count-baseline-offset);
+		/* Tabular figures make 1ch one digit wide, so the widest chamber's count reserves
+		   the same room in every chamber and the bar never resizes mid count-up. */
+		min-width: calc(var(--bop-count-digits) * 1ch);
+	}
+
+	.bar__count--democrat {
+		color: var(--bop-color-dem);
+		text-align: right;
+	}
+
+	.bar__count--republican {
+		color: var(--bop-color-rep);
+		text-align: left;
+	}
+
+	.bar__track {
+		position: relative;
+		flex: 1;
+		height: var(--bop-bar-height);
+		background: var(--bop-color-track);
+	}
+
+	.bar__segment {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+	}
+
+	.bar__segment--democrat {
+		left: 0;
+		width: var(--bop-democrat-share);
+		background: var(--bop-color-dem);
+	}
+
+	.bar__segment--republican {
+		right: 0;
+		width: var(--bop-republican-share);
+		background: var(--bop-color-rep);
+	}
+
+	.bar__party {
+		position: absolute;
+		bottom: calc(100% + var(--bop-party-baseline-gap));
+		font-family: var(--bop-font-family);
+		font-size: var(--bop-party-font-size);
+		font-weight: var(--bop-party-weight);
+		line-height: 1;
+	}
+
+	.bar__party--democrat {
+		left: 0;
+		color: var(--bop-color-dem);
+	}
+
+	.bar__party--republican {
+		right: 0;
+		color: var(--bop-color-rep);
+	}
+
+	.bar__threshold {
+		position: absolute;
+		top: 0;
+		left: var(--bop-threshold-position);
+		width: var(--bop-threshold-width);
+		height: calc(100% + var(--bop-threshold-overhang));
+		transform: translateX(-50%);
+		background: var(--bop-color-ink);
+	}
+
+	.bar__threshold-label {
+		position: absolute;
+		top: calc(100% + var(--bop-threshold-label-gap));
+		left: 50%;
+		transform: translateX(-50%);
+		font-family: var(--bop-font-family);
+		font-size: var(--bop-threshold-font-size);
+		font-weight: var(--bop-threshold-weight);
+		font-variant-numeric: tabular-nums;
+		line-height: 1;
+		color: var(--bop-color-ink);
+	}
+</style>

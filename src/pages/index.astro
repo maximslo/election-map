@@ -1,0 +1,44 @@
+---
+import BalanceOfPower from '../components/BalanceOfPower.astro';
+import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Balance of power</title>
+		{
+			FRANKLIN_WEIGHTS.map((weight) => (
+				<link
+					rel="preload"
+					as="font"
+					type="font/woff2"
+					href={franklinFontUrl(weight)}
+					crossorigin
+				/>
+			))
+		}
+	</head>
+	<body>
+		<main>
+			<BalanceOfPower />
+		</main>
+
+		<style>
+			body {
+				margin: 0;
+				background: var(--bop-color-page);
+			}
+
+			main {
+				display: flex;
+				justify-content: center;
+				padding: 40px 16px;
+			}
+		</style>
+	</body>
+</html>

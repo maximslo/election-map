@@ -1,0 +1,31 @@
+@font-face {
+	font-family: 'nyt-franklin';
+	src: url('/fonts/franklin/franklin-normal-300.woff2') format('woff2');
+	font-weight: 300;
+	font-style: normal;
+	font-display: block;
+}
+
+@font-face {
+	font-family: 'nyt-franklin';
+	src: url('/fonts/franklin/franklin-normal-500.woff2') format('woff2');
+	font-weight: 500;
+	font-style: normal;
+	font-display: block;
+}
+
+@font-face {
+	font-family: 'nyt-franklin';
+	src: url('/fonts/franklin/franklin-normal-600.woff2') format('woff2');
+	font-weight: 600;
+	font-style: normal;
+	font-display: block;
+}
+
+@font-face {
+	font-family: 'nyt-franklin';
+	src: url('/fonts/franklin/franklin-normal-700.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: block;
+}

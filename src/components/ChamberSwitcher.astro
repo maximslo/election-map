@@ -1,0 +1,99 @@
+---
+import { CUSTOM_PROPERTY, DATA_ATTRIBUTE } from '../config/constants';
+import type { Chamber } from '../data/chambers';
+
+type Props = {
+	chambers: Chamber[];
+	activeId: Chamber['id'];
+	panelIdFor: (chamber: Chamber) => string;
+	tabIdFor: (chamber: Chamber) => string;
+};
+
+const { chambers, activeId, panelIdFor, tabIdFor } = Astro.props;
+const activeIndex = chambers.findIndex((chamber) => chamber.id === activeId);
+---
+
+<div
+	class="switcher"
+	role="tablist"
+	aria-label="Chamber"
+	style={{
+		[CUSTOM_PROPERTY.tabCount]: chambers.length,
+		[CUSTOM_PROPERTY.activeIndex]: activeIndex,
+	}}
+>
+	<span class="switcher__pill" aria-hidden="true"></span>
+	{
+		chambers.map((chamber) => (
+			<button
+				type="button"
+				class="switcher__tab"
+				role="tab"
+				id={tabIdFor(chamber)}
+				aria-controls={panelIdFor(chamber)}
+				aria-selected={chamber.id === activeId}
+				tabindex={chamber.id === activeId ? 0 : -1}
+				{...{
+					[DATA_ATTRIBUTE.tab]: '',
+					[DATA_ATTRIBUTE.chamberId]: chamber.id,
+				}}
+			>
+				{chamber.label}
+			</button>
+		))
+	}
+</div>
+
+<style>
+	.switcher {
+		position: relative;
+		display: grid;
+		grid-template-columns: repeat(var(--bop-tab-count), 1fr);
+		height: var(--bop-switcher-height);
+		padding: var(--bop-switcher-pill-inset-block) var(--bop-switcher-pill-inset-inline);
+		border: var(--bop-switcher-border-width) solid var(--bop-color-tab-border);
+		border-radius: var(--bop-switcher-radius);
+		background: var(--bop-color-page);
+	}
+
+	.switcher__pill {
+		--bop-pill-track: calc(100% - 2 * var(--bop-switcher-pill-inset-inline));
+
+		position: absolute;
+		top: var(--bop-switcher-pill-inset-block);
+		bottom: var(--bop-switcher-pill-inset-block);
+		left: calc(
+			var(--bop-switcher-pill-inset-inline) + var(--bop-active-index) * var(--bop-pill-track) /
+				var(--bop-tab-count)
+		);
+		width: calc(var(--bop-pill-track) / var(--bop-tab-count));
+		border-radius: var(--bop-switcher-pill-radius);
+		background: var(--bop-color-tab-active-bg);
+		transition: left var(--bop-transition-duration) var(--bop-transition-easing);
+	}
+
+	.switcher__tab {
+		position: relative;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		font-family: var(--bop-font-family);
+		font-size: var(--bop-tab-font-size);
+		font-weight: var(--bop-tab-idle-weight);
+		line-height: 1;
+		color: var(--bop-color-tab-idle-text);
+		cursor: pointer;
+	}
+
+	.switcher__tab[aria-selected='true'] {
+		font-weight: var(--bop-tab-active-weight);
+		color: var(--bop-color-ink);
+	}
+
+	.switcher__tab:focus-visible {
+		outline: 2px solid var(--bop-color-ink);
+		outline-offset: 2px;
+		border-radius: var(--bop-switcher-pill-radius);
+	}
+</style>

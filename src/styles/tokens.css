@@ -1,0 +1,57 @@
+:root {
+	--bop-font-family: 'nyt-franklin', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+	--bop-color-dem: #026baa;
+	--bop-color-rep: #d22e31;
+	--bop-color-track: #e6e6e6;
+	--bop-color-ink: #000000;
+	--bop-color-page: #fdfdfd;
+	--bop-color-tab-border: #dadada;
+	--bop-color-tab-active-bg: #dfdfdf;
+	--bop-color-tab-idle-text: #909090;
+
+	--bop-width: 320px;
+	--bop-bar-inline-padding: 10px;
+
+	--bop-switcher-height: 41px;
+	--bop-switcher-border-width: 2px;
+	--bop-switcher-radius: 6px;
+	--bop-switcher-pill-inset-block: 3px;
+	--bop-switcher-pill-inset-inline: 3px;
+	--bop-switcher-pill-radius: calc(
+		var(--bop-switcher-radius) - var(--bop-switcher-pill-inset-block)
+	);
+	--bop-switcher-gap: 20px;
+
+	--bop-tab-font-size: 15.7px;
+	--bop-tab-idle-weight: 300;
+	--bop-tab-active-weight: 600;
+
+	--bop-bar-height: 16px;
+	--bop-bar-number-gap: 7px;
+
+	--bop-party-font-size: 18px;
+	--bop-party-weight: 600;
+	--bop-party-baseline-gap: 3.5px;
+
+	--bop-count-font-size: 37px;
+	--bop-count-weight: 700;
+	--bop-count-baseline-offset: -8.7px;
+
+	--bop-threshold-width: 1px;
+	--bop-threshold-overhang: 4px;
+	--bop-threshold-font-size: 14.3px;
+	--bop-threshold-weight: 500;
+	--bop-threshold-label-gap: 4px;
+
+	--bop-transition-duration: 600ms;
+	--bop-reveal-duration: 600ms;
+	--bop-transition-easing: cubic-bezier(0.3, 0.9, 0.9, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--bop-transition-duration: 0ms;
+		--bop-reveal-duration: 0ms;
+	}
+}
