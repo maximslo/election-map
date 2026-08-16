@@ -85,14 +85,22 @@ const assertElectoralMapIsCoherent = (states: ElectoralState[]): void => {
 	}
 };
 
-/** The drawing area, wide enough for both the tiles and the labels that sit outside them. */
-export const electoralMapExtent = (states: ElectoralState[]): ElectoralMapExtent => {
+/**
+ * The drawing area, wide enough for the tiles and, when labels are actually visible, the labels
+ * the source map places outside their block. `includeLabelPositions` should mirror whether
+ * --bop-map-label-size in tokens.css renders at 0 — reserving room for a label position nobody
+ * can see just pushes the whole map away from its neighbors for nothing.
+ */
+export const electoralMapExtent = (
+	states: ElectoralState[],
+	includeLabelPositions: boolean,
+): ElectoralMapExtent => {
 	const columns = states.flatMap((state) => [
-		state.labelColumn,
+		...(includeLabelPositions ? [state.labelColumn] : []),
 		...expandStateTiles(state).flatMap(({ column }) => [column, column + 1]),
 	]);
 	const rows = states.flatMap((state) => [
-		state.labelRow,
+		...(includeLabelPositions ? [state.labelRow] : []),
 		...expandStateTiles(state).flatMap(({ row }) => [row, row + 1]),
 	]);
 

@@ -66,9 +66,13 @@ const summary = [
 		--bop-count-overhang: calc(
 			var(--bop-count-font-size) + var(--bop-count-baseline-offset) - var(--bop-bar-height)
 		);
+		/* --bop-threshold-font-size reserves a full line's worth of room, but "270" has no
+		   descender — its actual ink stops well short of that. --bop-threshold-ink-trim (measured
+		   via a baseline probe + canvas descent, same technique as the count digits) removes just
+		   that slack, so this reserves exactly what the digits need and nothing past it. */
 		--bop-threshold-underhang: calc(
 			var(--bop-threshold-overhang) + var(--bop-threshold-label-gap) +
-				var(--bop-threshold-font-size)
+				var(--bop-threshold-font-size) - var(--bop-threshold-ink-trim)
 		);
 
 		display: flex;

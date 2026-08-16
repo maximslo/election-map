@@ -19,11 +19,19 @@ import {
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 
-const { cell, tileGap, stateSpacingTightness, hitAreaInset, bounceGrowthTarget, bounceScaleMin, bounceScaleMax } =
-	MAP_GEOMETRY;
+const {
+	cell,
+	tileGap,
+	stateSpacingTightness,
+	hitAreaInset,
+	bounceGrowthTarget,
+	bounceScaleMin,
+	bounceScaleMax,
+	labelsVisible,
+} = MAP_GEOMETRY;
 
 const states = applyStateSpacing(ELECTORAL_STATES, stateSpacingTightness);
-const extent = electoralMapExtent(states);
+const extent = electoralMapExtent(states, labelsVisible);
 const { democratCount, republicanCount } = tallyElectoralVotes(ELECTORAL_STATES);
 
 const viewBox = [extent.left, extent.top, extent.width, extent.height]
@@ -232,15 +240,20 @@ const tileSize = cell - tileGap;
 	   it can never itself cause :hover to drop. Separate from the click bounce's own transform on
 	   .map__state-bounce below, so a mid-hover click doesn't have both fighting to control the
 	   same element's transform (which snapped visibly to the animation's own 0% keyframe,
-	   ignoring wherever the hover transition currently had it). */
+	   ignoring wherever the hover transition currently had it).
+	   The duration split below is deliberate, not an oversight: a CSS transition always uses
+	   whichever rule matches the state being transitioned *into*, so growing in reads the fast
+	   --bop-map-hover-duration declared on the :hover rule, while settling back down on leave
+	   reads the much slower --bop-map-hover-exit-duration declared here on the base rule. */
 	.map__state-hover {
 		transform-box: fill-box;
 		transform-origin: center;
-		transition: transform var(--bop-map-hover-duration) var(--bop-digit-easing);
+		transition: transform var(--bop-map-hover-exit-duration) var(--bop-digit-easing);
 	}
 
 	.map__state:hover .map__state-hover {
 		transform: scale(var(--bop-state-hover-scale));
+		transition: transform var(--bop-map-hover-duration) var(--bop-digit-easing);
 	}
 
 	.map__state-bounce {

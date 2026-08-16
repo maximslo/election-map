@@ -117,9 +117,13 @@ export const MAP_GEOMETRY = {
 	 * Clamped so tiny states don't blow past the ceiling, and huge ones (California) don't shrink
 	 * to nothing.
 	 */
-	bounceGrowthTarget: 0.7,
-	bounceScaleMin: 1.06,
-	bounceScaleMax: 1.28,
+	bounceGrowthTarget: 1.1,
+	bounceScaleMin: 1.09,
+	bounceScaleMax: 1.4,
+	/** Mirrors whether --bop-map-label-size in tokens.css renders above 0px. Kept in sync by
+	 *  hand: electoralMapExtent reads this to decide whether a label's position (not just a
+	 *  tile's) needs room reserved around the map's edge. */
+	labelsVisible: false,
 } as const;
 
 export const NUMBER_ANIMATION_MODE = {

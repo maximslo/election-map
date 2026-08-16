@@ -44,15 +44,13 @@
 	--bop-tab-idle-weight: 300;
 	--bop-tab-active-weight: 600;
 
-	/* Matches the rendered height of one map grid square at --bop-map-canvas-width; measured
-	   rather than computed, since it depends on the map's viewBox math. */
-	--bop-bar-height: 6.18px;
+	--bop-bar-height: 16px;
 	--bop-bar-number-gap: 7px;
 
 	/* Grows the sliding-digit clip window beyond the glyph's own natural line-height — the purple
 	   debug lines and the real overflow:hidden clip are the same box, so both move together.
 	   Positive values push that edge outward (top up, bottom down); 0 is the glyph's own edge. */
-	--bop-slot-clip-top: -4.5px;
+	--bop-slot-clip-top: 3.8px;
 	--bop-slot-clip-bottom: -5.8px;
 
 	--bop-party-font-size: 18px;
@@ -61,17 +59,18 @@
 
 	--bop-count-font-size: 37px;
 	--bop-count-weight: 700;
-	/* Was -8.7px, tuned to align with the old 16px-tall bar. line-height:1 still leaves the
-	   font's own leading below the glyph, so aligning the element's box wasn't enough — the
-	   visible ink sat well above the bar. Measured via a zero-height baseline probe plus the
-	   glyphs' actual canvas descent, so this pulls the real ink flush with the bar's bottom. */
-	--bop-count-baseline-offset: -6.51px;
+	/* Was -8.7px — that aligned the counter's own box with the bar, but line-height:1 still
+	   leaves the font's own leading below the glyph, so the visible ink sat a couple px below the
+	   bar's bottom. Measured via a zero-height baseline probe plus the glyphs' actual canvas
+	   descent, so this pulls the real ink flush with the bar's bottom instead of just the box. */
+	--bop-count-baseline-offset: -6.525px;
 
 	--bop-threshold-width: 1px;
 	--bop-threshold-overhang: 4px;
 	--bop-threshold-font-size: 14.3px;
 	--bop-threshold-weight: 500;
 	--bop-threshold-label-gap: 4px;
+	--bop-threshold-ink-trim: 3.14px;
 
 	--bop-transition-duration: 600ms;
 	--bop-reveal-duration: 600ms;
@@ -92,6 +91,9 @@
 	   better snappy rather than springy. */
 	--bop-map-click-duration: 260ms;
 	--bop-map-hover-duration: 120ms;
+	/* Easing back down when the cursor leaves is deliberately much slower than growing in — a
+	   lingering settle instead of a snap. */
+	--bop-map-hover-exit-duration: 700ms;
 
 	/* Motion-blur count-up: blur is loudest at the very start and decays linearly to zero by
 	   --bop-count-blur-fraction of the way through the reveal — a duration of its own, so it
@@ -107,5 +109,6 @@
 		--bop-digit-duration: 0ms;
 		--bop-map-click-duration: 0ms;
 		--bop-map-hover-duration: 0ms;
+		--bop-map-hover-exit-duration: 0ms;
 	}
 }

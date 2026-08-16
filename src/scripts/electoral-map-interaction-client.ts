@@ -48,6 +48,15 @@ const playClickAnimation = (stateGroup: SVGGElement): void => {
 	stateGroup.setAttribute(DATA_ATTRIBUTE.stateActivating, '');
 };
 
+// SVG has no z-index of its own — later siblings simply paint over earlier ones, in document
+// order. A popped state can overshoot into a neighbor drawn later in that order and end up
+// underneath it. CSS z-index doesn't fix this either: a plain <g> isn't a positioned element, so
+// it never creates the stacking context z-index needs, even paired with position:relative.
+// Moving the node itself is the only thing that reliably reorders SVG paint order.
+const bringToFront = (stateGroup: SVGGElement): void => {
+	stateGroup.parentElement?.append(stateGroup);
+};
+
 const tally = (stateGroups: SVGGElement[]): MapResultDetail =>
 	stateGroups.reduce(
 		(totals, stateGroup) => {
@@ -80,6 +89,7 @@ export const initElectoralMapInteraction = (): void => {
 		const current = stateGroup.getAttribute(DATA_ATTRIBUTE.currentParty) as MapAssignment;
 
 		paintStateGroup(stateGroup, nextAssignment(current));
+		bringToFront(stateGroup);
 		playClickAnimation(stateGroup);
 
 		document.dispatchEvent(
