@@ -1,14 +1,21 @@
 import {
+	CHAMBER_CHANGE_EVENT,
 	CUSTOM_PROPERTY,
 	DATA_ATTRIBUTE,
 	DIGIT_STAGGER,
 	KEY,
+	MAP_RESULT_CHANGE_EVENT,
 	MILLISECONDS_PER_SECOND,
 	NUMBER_ANIMATION_INPUT_NAME,
 	NUMBER_ANIMATION_MODE,
+	PRESIDENT_ELECTION,
+	type ChamberId,
+	type MapResultDetail,
 	type NumberAnimationMode,
 } from '../config/constants';
 import { createEasing, type EasingFunction } from '../lib/cubic-bezier';
+
+const PRESIDENT_CHAMBER_ID: ChamberId = 'president';
 
 const FALLBACK_EASING = 'cubic-bezier(0, 0, 0.58, 1)';
 const DIGIT_WHEEL_SIZE = 10;
@@ -348,6 +355,17 @@ const revealPanel = (
 	});
 };
 
+const announceChamber = (panel: HTMLElement): void => {
+	const chamberId = panel.getAttribute(DATA_ATTRIBUTE.chamberId);
+
+	if (!chamberId) {
+		return;
+	}
+
+	document.documentElement.setAttribute(DATA_ATTRIBUTE.activeChamber, chamberId);
+	document.dispatchEvent(new CustomEvent(CHAMBER_CHANGE_EVENT, { detail: { chamberId } }));
+};
+
 const readNumberAnimationMode = (root: HTMLElement): NumberAnimationMode => {
 	const value = root.getAttribute(DATA_ATTRIBUTE.numberAnimationMode);
 
@@ -390,6 +408,7 @@ const connectSwitcher = (root: HTMLElement): void => {
 		});
 
 		revealPanel(panels[index], previous, readNumberAnimationMode(root));
+		announceChamber(panels[index]);
 		hasRevealed = true;
 
 		if (moveFocus) {
@@ -462,9 +481,59 @@ const connectNumberAnimationSelector = (): void => {
 	});
 };
 
+const toPercentage = (part: number, whole: number): string => `${(part / whole) * 100}%`;
+
+// The map dispatches new totals whenever a click changes a state's assignment; this replays the
+// same reveal the president panel uses on a tab switch, just sourced from the map instead of the
+// server-rendered targets.
+const applyElectionResult = ({ democratCount, republicanCount }: MapResultDetail): void => {
+	const root = document.querySelector<HTMLElement>(`[${DATA_ATTRIBUTE.root}]`);
+	const panel = document.querySelector<HTMLElement>(
+		`[${DATA_ATTRIBUTE.panel}][${DATA_ATTRIBUTE.chamberId}="${PRESIDENT_CHAMBER_ID}"]`,
+	);
+	const bar = panel?.querySelector<HTMLElement>(`[${DATA_ATTRIBUTE.bar}]`);
+	const [democratCounter, republicanCounter] = panel ? countersOf(panel) : [];
+
+	if (!root || !panel || !bar || !democratCounter || !republicanCounter) {
+		return;
+	}
+
+	const previous = snapshotPanel(panel);
+
+	democratCounter.setAttribute(DATA_ATTRIBUTE.counterTarget, String(democratCount));
+	republicanCounter.setAttribute(DATA_ATTRIBUTE.counterTarget, String(republicanCount));
+
+	bar.style.setProperty(
+		CUSTOM_PROPERTY.democratShare,
+		toPercentage(democratCount, PRESIDENT_ELECTION.totalVotes),
+	);
+	bar.style.setProperty(
+		CUSTOM_PROPERTY.republicanShare,
+		toPercentage(republicanCount, PRESIDENT_ELECTION.totalVotes),
+	);
+
+	const undecidedCount = PRESIDENT_ELECTION.totalVotes - democratCount - republicanCount;
+
+	bar.setAttribute(
+		'aria-label',
+		[
+			`Democrats ${democratCount}`,
+			`Republicans ${republicanCount}`,
+			`${undecidedCount} undecided of ${PRESIDENT_ELECTION.totalVotes}`,
+			`${PRESIDENT_ELECTION.majorityThreshold} for a majority`,
+		].join(', '),
+	);
+
+	revealPanel(panel, previous, readNumberAnimationMode(root));
+};
+
 export const initBalanceOfPower = (): void => {
 	const roots = document.querySelectorAll<HTMLElement>(`[${DATA_ATTRIBUTE.root}]`);
 
 	roots.forEach(connectSwitcher);
 	connectNumberAnimationSelector();
+
+	document.addEventListener(MAP_RESULT_CHANGE_EVENT, (event) => {
+		applyElectionResult((event as CustomEvent<MapResultDetail>).detail);
+	});
 };

@@ -1,0 +1,182 @@
+---
+import {
+	CANDIDATE_NAME,
+	DATA_ATTRIBUTE,
+	MAP_ASSIGNMENT_LABEL,
+	MAP_GEOMETRY,
+	PARTY,
+	type Party,
+} from '../config/constants';
+import { ELECTORAL_STATES, type ElectoralState } from '../data/electoral-map';
+import {
+	applyStateSpacing,
+	electoralMapExtent,
+	expandStateTiles,
+	isLabelOverTiles,
+	tallyElectoralVotes,
+} from '../lib/electoral-map';
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+
+const { cell, tileGap, stateSpacingTightness } = MAP_GEOMETRY;
+
+const states = applyStateSpacing(ELECTORAL_STATES, stateSpacingTightness);
+const extent = electoralMapExtent(states);
+const { democratCount, republicanCount } = tallyElectoralVotes(ELECTORAL_STATES);
+
+const viewBox = [extent.left, extent.top, extent.width, extent.height]
+	.map((value) => value * cell)
+	.join(' ');
+
+const summary = [
+	'Electoral College map by state',
+	`${CANDIDATE_NAME.democrat} ${democratCount}`,
+	`${CANDIDATE_NAME.republican} ${republicanCount}`,
+].join(', ');
+
+const TILE_CLASS: Record<Party, string> = {
+	[PARTY.democrat]: 'map__tile--democrat',
+	[PARTY.republican]: 'map__tile--republican',
+};
+
+const tilesOf = (state: ElectoralState) =>
+	expandStateTiles(state).map(({ column, row, party }) => ({
+		partyClass: TILE_CLASS[party],
+		x: column * cell + tileGap / 2,
+		y: row * cell + tileGap / 2,
+	}));
+
+// Every state's tiles share one party, so the first tile speaks for the whole block — this is
+// the assignment a click cycles away from.
+const initialPartyOf = (state: ElectoralState): Party => expandStateTiles(state)[0].party;
+
+const tileSize = cell - tileGap;
+---
+
+<figure
+	class="map"
+	{...{ [DATA_ATTRIBUTE.electoralMap]: '' }}
+	hidden
+>
+	<svg class="map__canvas" viewBox={viewBox} role="img" aria-label={summary}>
+		{
+			states.map((state) => {
+				const initialParty = initialPartyOf(state);
+				const labelOverTiles = isLabelOverTiles(state);
+
+				return (
+					<g
+						class="map__state"
+						role="button"
+						tabindex="0"
+						aria-label={`${state.label}, ${MAP_ASSIGNMENT_LABEL[initialParty]}`}
+						{...{
+							[DATA_ATTRIBUTE.mapState]: '',
+							[DATA_ATTRIBUTE.currentParty]: initialParty,
+							[DATA_ATTRIBUTE.electoralVotes]: state.electoralVotes,
+							[DATA_ATTRIBUTE.labelOverTiles]: String(labelOverTiles),
+						}}
+					>
+						{tilesOf(state).map((tile) => (
+							<rect
+								class:list={['map__tile', tile.partyClass]}
+								x={tile.x}
+								y={tile.y}
+								width={tileSize}
+								height={tileSize}
+							/>
+						))}
+						<text
+							class:list={['map__label', labelOverTiles && 'map__label--knockout']}
+							x={state.labelColumn * cell}
+							y={state.labelRow * cell}
+							text-anchor="middle"
+						>
+							{state.label}
+						</text>
+					</g>
+				);
+			})
+		}
+	</svg>
+</figure>
+
+<script>
+	import { initElectoralMap } from '../scripts/electoral-map-client';
+	import { initElectoralMapInteraction } from '../scripts/electoral-map-interaction-client';
+
+	initElectoralMap();
+	initElectoralMapInteraction();
+</script>
+
+<style>
+	.map {
+		width: 100%;
+		max-width: var(--bop-map-canvas-width);
+		margin: 0;
+	}
+
+	.map[hidden] {
+		display: none;
+	}
+
+	.map__canvas {
+		display: block;
+		width: 100%;
+		height: auto;
+		overflow: visible;
+	}
+
+	.map__state {
+		cursor: pointer;
+		outline: none;
+	}
+
+	.map__tile--democrat {
+		fill: var(--bop-color-dem);
+	}
+
+	.map__tile--republican {
+		fill: var(--bop-color-rep);
+	}
+
+	.map__tile--undecided {
+		fill: var(--bop-color-tab-active-bg);
+	}
+
+	.map__label {
+		font-family: var(--bop-font-family);
+		font-size: var(--bop-map-label-size);
+		font-weight: var(--bop-map-label-weight);
+		fill: var(--bop-color-map-label);
+	}
+
+	.map__label--knockout {
+		fill: var(--bop-color-page);
+	}
+
+	.map__state {
+		transform-box: fill-box;
+		transform-origin: center;
+	}
+
+	@keyframes map-state-click {
+		0% {
+			transform: scale(1);
+		}
+
+		45% {
+			transform: scale(var(--bop-map-click-scale));
+		}
+
+		100% {
+			transform: scale(1);
+		}
+	}
+
+	/* The whole state — every tile and its label — scales together as one rigid block, around
+	   the group's own bounding-box center, instead of each tile popping independently. */
+	.map__state[data-state-activating] {
+		animation: map-state-click var(--bop-map-click-duration) var(--bop-digit-easing);
+	}
+</style>

@@ -1,4 +1,8 @@
-import type { ChamberId } from '../config/constants';
+import { PRESIDENT_ELECTION, type ChamberId } from '../config/constants';
+import { tallyElectoralVotes } from '../lib/electoral-map';
+import { ELECTORAL_STATES } from './electoral-map';
+
+const presidentTally = tallyElectoralVotes(ELECTORAL_STATES);
 
 export type Chamber = {
 	id: ChamberId;
@@ -14,10 +18,10 @@ export const CHAMBERS: Chamber[] = [
 	{
 		id: 'president',
 		label: 'President',
-		totalAtStake: 538,
-		majorityThreshold: 270,
-		democratCount: 224,
-		republicanCount: 213,
+		totalAtStake: PRESIDENT_ELECTION.totalVotes,
+		majorityThreshold: PRESIDENT_ELECTION.majorityThreshold,
+		democratCount: presidentTally.democratCount,
+		republicanCount: presidentTally.republicanCount,
 	},
 	{
 		id: 'senate',

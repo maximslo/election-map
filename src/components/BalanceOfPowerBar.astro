@@ -28,6 +28,7 @@ const summary = [
 		[CUSTOM_PROPERTY.republicanShare]: republicanShare,
 		[CUSTOM_PROPERTY.thresholdPosition]: thresholdPosition,
 	}}
+	{...{ [DATA_ATTRIBUTE.bar]: '' }}
 >
 	<span
 		class="bar__count bar__count--democrat"
@@ -147,22 +148,6 @@ const summary = [
 		display: inline-block;
 		width: 1ch;
 		overflow: hidden;
-		/* barvian/number-flow — fades digits to transparent as they scroll past the clipped
-		   edge, instead of cutting them off hard. -webkit- prefix is required by Safari. */
-		mask-image: linear-gradient(
-			to bottom,
-			transparent 0,
-			#000 var(--bop-slot-mask-size),
-			#000 calc(100% - var(--bop-slot-mask-size)),
-			transparent 100%
-		);
-		-webkit-mask-image: linear-gradient(
-			to bottom,
-			transparent 0,
-			#000 var(--bop-slot-mask-size),
-			#000 calc(100% - var(--bop-slot-mask-size)),
-			transparent 100%
-		);
 	}
 
 	:global(.bar__slot-spacer) {

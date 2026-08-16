@@ -5,13 +5,30 @@
 	--bop-color-rep: #d22e31;
 	--bop-color-track: #e6e6e6;
 	--bop-color-ink: #000000;
+	/* The white a card/surface sits on — the switcher's idle background and the map's knockout
+	   labels both mean "white" when they reference this, not "whatever the page happens to be". */
 	--bop-color-page: #fdfdfd;
+	/* The muted gray the page itself sits on, behind any white card. */
+	--bop-color-canvas: #efeeec;
 	--bop-color-tab-border: #dadada;
 	--bop-color-tab-active-bg: #dfdfdf;
 	--bop-color-tab-idle-text: #909090;
 
 	--bop-width: 320px;
 	--bop-bar-inline-padding: 10px;
+	/* Sizes the card's content area — kept wider than the map's own render width below, so
+	   shrinking the map doesn't also shrink the card around it. */
+	--bop-map-width: 350px;
+	--bop-map-canvas-width: 330px;
+
+	--bop-card-padding: 24px;
+	--bop-card-padding-bottom: 40px;
+	--bop-card-radius: 16px;
+
+	/* Sized in the map's own user units, so labels scale with the tiles. */
+	--bop-map-label-size: 0px;
+	--bop-map-label-weight: 500;
+	--bop-color-map-label: #666666;
 
 	--bop-switcher-height: 41px;
 	--bop-switcher-border-width: 2px;
@@ -57,8 +74,10 @@
 	--bop-digit-direction-x: 0;
 	--bop-digit-direction-y: 1;
 
-	/* barvian/number-flow — vertical edge fade on the sliding-digit wheel. */
-	--bop-slot-mask-size: 8px;
+	/* A state's tiles briefly overshoot then settle back on click, using the same springy easing
+	   as the digit pop-in above. */
+	--bop-map-click-duration: 260ms;
+	--bop-map-click-scale: 1.06;
 
 	/* Motion-blur count-up: blur is loudest at the very start and decays linearly to zero by
 	   --bop-count-blur-fraction of the way through the reveal — a duration of its own, so it
@@ -72,5 +91,6 @@
 		--bop-transition-duration: 0ms;
 		--bop-reveal-duration: 0ms;
 		--bop-digit-duration: 0ms;
+		--bop-map-click-duration: 0ms;
 	}
 }

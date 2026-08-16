@@ -17,6 +17,94 @@ export const DATA_ATTRIBUTE = {
 	digitAnimating: 'data-digit-animating',
 	digitStagger: 'data-digit-stagger',
 	currentValue: 'data-current-value',
+	electoralMap: 'data-electoral-map',
+	activeChamber: 'data-active-chamber',
+	bar: 'data-bar',
+	mapState: 'data-map-state',
+	currentParty: 'data-current-party',
+	electoralVotes: 'data-electoral-votes',
+	labelOverTiles: 'data-label-over-tiles',
+	stateActivating: 'data-state-activating',
+} as const;
+
+/** Dispatched by the map after a click changes a state's assignment, carrying the new totals. */
+export const MAP_RESULT_CHANGE_EVENT = 'balance-of-power:map-result-change';
+
+export type MapResultDetail = {
+	democratCount: number;
+	republicanCount: number;
+};
+
+/**
+ * How the electoral map learns which chamber is showing without the switcher knowing it exists.
+ * The switcher also records the chamber on the document element, so a listener that registers
+ * after the first activation can still pick up where things stand.
+ */
+export const CHAMBER_CHANGE_EVENT = 'balance-of-power:chamber-change';
+
+export const PARTY = {
+	democrat: 'democrat',
+	republican: 'republican',
+} as const;
+
+export type Party = (typeof PARTY)[keyof typeof PARTY];
+
+/** The characters an electoral map shape row is written in. */
+export const TILE_CODE = {
+	[PARTY.democrat]: 'b',
+	[PARTY.republican]: 'r',
+	empty: '.',
+} as const;
+
+/**
+ * What a state can be assigned to on the map. A superset of `Party`: every state starts as one
+ * of the two real parties, but clicking can also land it on "undecided" — a state with no data
+ * equivalent, so it isn't folded into `Party` itself.
+ */
+export const MAP_ASSIGNMENT = {
+	republican: PARTY.republican,
+	democrat: PARTY.democrat,
+	undecided: 'undecided',
+} as const;
+
+export type MapAssignment = (typeof MAP_ASSIGNMENT)[keyof typeof MAP_ASSIGNMENT];
+
+/** The order a state's assignment cycles through on click, wrapping back to the start. */
+export const MAP_ASSIGNMENT_CYCLE: MapAssignment[] = [
+	MAP_ASSIGNMENT.republican,
+	MAP_ASSIGNMENT.democrat,
+	MAP_ASSIGNMENT.undecided,
+];
+
+export const MAP_ASSIGNMENT_TILE_CLASS: Record<MapAssignment, string> = {
+	[MAP_ASSIGNMENT.republican]: 'map__tile--republican',
+	[MAP_ASSIGNMENT.democrat]: 'map__tile--democrat',
+	[MAP_ASSIGNMENT.undecided]: 'map__tile--undecided',
+};
+
+export const MAP_ASSIGNMENT_LABEL: Record<MapAssignment, string> = {
+	[MAP_ASSIGNMENT.republican]: 'Republican',
+	[MAP_ASSIGNMENT.democrat]: 'Democratic',
+	[MAP_ASSIGNMENT.undecided]: 'Undecided',
+};
+
+/** Shared with the president Chamber entry, so the bar and the map always agree on the totals a
+ *  majority is measured against. */
+export const PRESIDENT_ELECTION = {
+	totalVotes: 538,
+	majorityThreshold: 270,
+} as const;
+
+/**
+ * The map is drawn in SVG user units. One grid cell is CELL units on a side, which only decides
+ * how readable the emitted coordinates are — the viewBox scales the whole thing to fit.
+ */
+export const MAP_GEOMETRY = {
+	cell: 10,
+	tileGap: 0.45,
+	/** 0 reproduces the source map's spacing; 1 pulls states as close together as they'll go
+	 *  without any two touching more than edge-to-edge. */
+	stateSpacingTightness: 0,
 } as const;
 
 export const NUMBER_ANIMATION_MODE = {
@@ -50,8 +138,13 @@ export const CUSTOM_PROPERTY = {
 } as const;
 
 export const PARTY_LABEL = {
-	democrat: 'Dem.',
-	republican: 'Rep.',
+	[PARTY.democrat]: 'Dem.',
+	[PARTY.republican]: 'Rep.',
+} as const;
+
+export const CANDIDATE_NAME = {
+	[PARTY.democrat]: 'Biden',
+	[PARTY.republican]: 'Trump',
 } as const;
 
 export const KEY = {

@@ -1,5 +1,6 @@
 ---
 import BalanceOfPower from '../components/BalanceOfPower.astro';
+import ElectoralTileMap from '../components/ElectoralTileMap.astro';
 import NumberAnimationSelector from '../components/NumberAnimationSelector.astro';
 import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 ---
@@ -28,14 +29,17 @@ import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 		<main>
 			<div class="demo">
 				<NumberAnimationSelector />
-				<BalanceOfPower />
+				<div class="widget-card">
+					<BalanceOfPower />
+					<ElectoralTileMap />
+				</div>
 			</div>
 		</main>
 
 		<style>
 			body {
 				margin: 0;
-				background: var(--bop-color-page);
+				background: var(--bop-color-canvas);
 			}
 
 			main {
@@ -48,8 +52,22 @@ import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
 				display: flex;
 				flex-direction: column;
 				align-items: center;
+				gap: 12px;
 				width: 100%;
-				max-width: var(--bop-width);
+			}
+
+			.widget-card {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 12px;
+				width: 100%;
+				/* The narrower widget and the wider map both center within this on their own —
+				   padding is added outside it, not folded in, so it stays even on every side. */
+				max-width: var(--bop-map-width);
+				padding: var(--bop-card-padding) var(--bop-card-padding) var(--bop-card-padding-bottom);
+				border-radius: var(--bop-card-radius);
+				background: var(--bop-color-page);
 			}
 		</style>
 	</body>
