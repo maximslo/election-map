@@ -48,6 +48,9 @@ const readDurationMs = (element: HTMLElement): number => {
 const readEasing = (element: HTMLElement): string =>
 	readCustomProperty(element, CUSTOM_PROPERTY.transitionEasing) || FALLBACK_EASING;
 
+const readNumberProperty = (element: HTMLElement, name: string): number =>
+	Number.parseFloat(readCustomProperty(element, name)) || 0;
+
 const countTo = (
 	element: HTMLElement,
 	from: number,
@@ -81,6 +84,60 @@ const countTo = (
 
 		if (progress < 1) {
 			pendingCountUps.set(element, requestAnimationFrame(step));
+		}
+	};
+
+	pendingCountUps.set(element, requestAnimationFrame(step));
+};
+
+// Same eased tween as countTo, with a motion blur that's loudest at the start and decays
+// linearly to zero over its own --bop-count-blur-fraction of the duration. That's deliberately
+// decoupled from the reveal curve's own (tail-heavy) deceleration: gating blur on "currently
+// moving faster than this tween's average rate" sounds right but, for a curve shaped like ours,
+// resolves to a near-instant cutoff, since a tail-heavy curve spends most of its own duration
+// below its average rate by construction. A duration of its own is easier to reason about and
+// to extend.
+const countToWithBlur = (
+	element: HTMLElement,
+	from: number,
+	to: number,
+	durationMs: number,
+	ease: EasingFunction,
+): void => {
+	const pending = pendingCountUps.get(element);
+
+	if (pending !== undefined) {
+		cancelAnimationFrame(pending);
+	}
+
+	const maxBlurPx = readNumberProperty(element, CUSTOM_PROPERTY.countBlurMax);
+	const blurFraction = readNumberProperty(element, CUSTOM_PROPERTY.countBlurFraction) || 1;
+
+	if (!(durationMs > 0)) {
+		element.textContent = String(to);
+		element.setAttribute(DATA_ATTRIBUTE.currentValue, String(to));
+		return;
+	}
+
+	element.textContent = String(Math.round(from));
+	element.setAttribute(DATA_ATTRIBUTE.currentValue, String(Math.round(from)));
+
+	const startedAt = performance.now();
+
+	const step = (now: number): void => {
+		const progress = Math.min((now - startedAt) / durationMs, 1);
+		const current = Math.round(from + (to - from) * ease(progress));
+		const blurProgress = Math.min(progress / blurFraction, 1);
+		const blurPx = maxBlurPx * (1 - blurProgress);
+
+		element.textContent = String(current);
+		element.setAttribute(DATA_ATTRIBUTE.currentValue, String(current));
+		element.style.filter = blurPx > 0.1 ? `blur(${blurPx}px)` : '';
+
+		if (progress < 1) {
+			pendingCountUps.set(element, requestAnimationFrame(step));
+		} else {
+			element.style.filter = '';
 		}
 	};
 
@@ -140,12 +197,16 @@ const popInDigits = (element: HTMLElement, value: number): void => {
 // One slot per digit place; each holds all ten digits, and a single "reel position" per slot
 // (fromDigit easing to toDigit) decides which one is centered — the same math the source uses
 // to keep every stacked digit positioned sensibly relative to whichever one is currently showing.
-const buildDigitSlots = (counter: HTMLElement, digitCount: number): DigitSlot[] => {
+const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number): DigitSlot[] => {
 	const fragment = document.createDocumentFragment();
 	const slots: DigitSlot[] = [];
+	// A slot's place is beyond what `from` needed to be written out, so it's animating in
+	// from nothing rather than rolling from a digit that was actually on screen.
+	const highestExistingPlace = 10 ** String(from).length;
 
 	for (let position = 0; position < digitCount; position += 1) {
 		const place = 10 ** (digitCount - position - 1);
+		const isNewSlot = place >= highestExistingPlace;
 		const slot = document.createElement('span');
 		slot.className = 'bar__slot';
 
@@ -160,7 +221,9 @@ const buildDigitSlots = (counter: HTMLElement, digitCount: number): DigitSlot[] 
 		for (let digit = 0; digit < DIGIT_WHEEL_SIZE; digit += 1) {
 			const digitSpan = document.createElement('span');
 			digitSpan.className = 'bar__slot-digit';
-			digitSpan.textContent = String(digit);
+			// The reel still starts at position 0 for a new slot, but that zero was never
+			// really "there" — leave it blank so the slot looks like it grows in from empty.
+			digitSpan.textContent = isNewSlot && digit === 0 ? '' : String(digit);
 			slot.append(digitSpan);
 			digitSpans.push(digitSpan);
 		}
@@ -201,7 +264,7 @@ const slideDigits = (
 		cancelAnimationFrame(pending);
 	}
 
-	const slots = buildDigitSlots(element, String(to).length);
+	const slots = buildDigitSlots(element, from, String(to).length);
 	const slotHeight = slots[0]?.digitSpans[0]?.getBoundingClientRect().height ?? 0;
 
 	const applyProgress = (linearProgress: number): void => {
@@ -265,10 +328,16 @@ const revealPanel = (
 
 		const from = previous?.counts[index] ?? 0;
 
+		// Only the blur mode ever sets this; clearing it before every mode dispatch means
+		// switching away from blur mid-animation can't leave a stale filter behind.
+		counter.style.filter = '';
+
 		if (mode === NUMBER_ANIMATION_MODE.popIn) {
 			popInDigits(counter, target);
 		} else if (mode === NUMBER_ANIMATION_MODE.slide) {
 			slideDigits(counter, from, target, durationMs, ease);
+		} else if (mode === NUMBER_ANIMATION_MODE.blur) {
+			countToWithBlur(counter, from, target, durationMs, ease);
 		} else {
 			countTo(counter, from, target, durationMs, ease);
 		}
@@ -282,7 +351,11 @@ const revealPanel = (
 const readNumberAnimationMode = (root: HTMLElement): NumberAnimationMode => {
 	const value = root.getAttribute(DATA_ATTRIBUTE.numberAnimationMode);
 
-	if (value === NUMBER_ANIMATION_MODE.popIn || value === NUMBER_ANIMATION_MODE.slide) {
+	if (
+		value === NUMBER_ANIMATION_MODE.popIn ||
+		value === NUMBER_ANIMATION_MODE.slide ||
+		value === NUMBER_ANIMATION_MODE.blur
+	) {
 		return value;
 	}
 

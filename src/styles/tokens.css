@@ -59,6 +59,12 @@
 
 	/* barvian/number-flow — vertical edge fade on the sliding-digit wheel. */
 	--bop-slot-mask-size: 8px;
+
+	/* Motion-blur count-up: blur is loudest at the very start and decays linearly to zero by
+	   --bop-count-blur-fraction of the way through the reveal — a duration of its own, so it
+	   isn't at the mercy of how quickly the tail-heavy reveal curve above happens to decelerate. */
+	--bop-count-blur-max: 6px;
+	--bop-count-blur-fraction: 0.6;
 }
 
 @media (prefers-reduced-motion: reduce) {

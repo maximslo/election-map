@@ -23,6 +23,7 @@ export const NUMBER_ANIMATION_MODE = {
 	countUp: 'count-up',
 	popIn: 'pop-in',
 	slide: 'slide',
+	blur: 'blur',
 } as const;
 
 export type NumberAnimationMode = (typeof NUMBER_ANIMATION_MODE)[keyof typeof NUMBER_ANIMATION_MODE];
@@ -44,6 +45,8 @@ export const CUSTOM_PROPERTY = {
 	revealDuration: '--bop-reveal-duration',
 	transitionEasing: '--bop-transition-easing',
 	countDigits: '--bop-count-digits',
+	countBlurMax: '--bop-count-blur-max',
+	countBlurFraction: '--bop-count-blur-fraction',
 } as const;
 
 export const PARTY_LABEL = {
