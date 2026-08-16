@@ -21,7 +21,9 @@ const nextAssignment = (current: MapAssignment): MapAssignment => {
 const paintStateGroup = (stateGroup: SVGGElement, assignment: MapAssignment): void => {
 	const tileClass = MAP_ASSIGNMENT_TILE_CLASS[assignment];
 
-	stateGroup.querySelectorAll<SVGRectElement>('rect').forEach((tile) => {
+	// Scoped past the hit-area rect — an invisible, unscaled sibling of .map__state-bounce that
+	// exists purely for stable hover hit-testing, not a tile to repaint.
+	stateGroup.querySelectorAll<SVGRectElement>('.map__state-bounce rect').forEach((tile) => {
 		tile.setAttribute('class', `map__tile ${tileClass}`);
 	});
 

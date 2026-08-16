@@ -534,3 +534,49 @@ export const ELECTORAL_STATES: ElectoralState[] = [
 		shape: ['rrr'],
 	},
 ];
+
+/**
+ * Extra hover hit-area cells for every genuinely empty stretch of 2+ cells between two states
+ * (Alaska and Hawaii excluded — they're isolated insets, not bordering anyone) — not real tiles,
+ * so these don't touch electoralVotes anywhere; per-tile hit-area padding alone doesn't reach
+ * across a gap this wide. A cell only qualifies if it's flanked by two *different* states along
+ * the same row or column, and goes to whichever of the two is nearer; an exact 1-cell gap is left
+ * alone; that's already covered well enough by each side's own padding.
+ *
+ * Generated, not hand-placed, and checked against every other state's real tiles afterward — the
+ * generating script and its full derivation live in this session's history, not in the repo.
+ */
+export const EXTRA_HIT_AREA_CELLS: Record<string, Array<{ column: number; row: number }>> = {
+	arizona: [{ column: 5, row: 14 }, { column: 5, row: 15 }, { column: 8, row: 18 }, { column: 9, row: 18 }],
+	arkansas: [{ column: 20, row: 19 }, { column: 19, row: 20 }, { column: 20, row: 20 }],
+	california: [{ column: 4, row: 14 }, { column: 4, row: 15 }, { column: 4, row: 16 }, { column: 7, row: 19 }, { column: 8, row: 22 }, { column: 8, row: 23 }, { column: 6, row: 24 }, { column: 6, row: 25 }, { column: 7, row: 25 }],
+	connecticut: [{ column: 43, row: 9 }],
+	florida: [{ column: 37, row: 26 }, { column: 38, row: 26 }],
+	georgia: [{ column: 29, row: 19 }, { column: 31, row: 20 }],
+	idaho: [{ column: 7, row: 5 }, { column: 7, row: 6 }, { column: 7, row: 8 }],
+	kansas: [{ column: 13, row: 14 }],
+	kentucky: [{ column: 30, row: 16 }, { column: 29, row: 18 }],
+	louisiana: [{ column: 20, row: 21 }, { column: 20, row: 22 }, { column: 17, row: 23 }, { column: 16, row: 24 }],
+	massachusetts: [{ column: 46, row: 3 }],
+	michigan: [{ column: 25, row: 5 }, { column: 25, row: 6 }, { column: 32, row: 6 }, { column: 25, row: 7 }, { column: 30, row: 7 }, { column: 31, row: 7 }, { column: 25, row: 8 }, { column: 29, row: 8 }, { column: 30, row: 8 }],
+	minnesota: [{ column: 19, row: 5 }, { column: 19, row: 6 }],
+	montana: [{ column: 8, row: 5 }, { column: 9, row: 6 }, { column: 10, row: 6 }, { column: 11, row: 6 }],
+	nebraska: [{ column: 14, row: 11 }],
+	nevada: [{ column: 4, row: 8 }, { column: 4, row: 9 }],
+	'new-jersey': [{ column: 43, row: 10 }],
+	'new-mexico': [{ column: 12, row: 14 }, { column: 11, row: 16 }],
+	'new-york': [{ column: 32, row: 7 }, { column: 31, row: 8 }],
+	'north-dakota': [{ column: 13, row: 6 }, { column: 14, row: 6 }, { column: 15, row: 6 }],
+	ohio: [{ column: 30, row: 9 }, { column: 28, row: 14 }],
+	pennsylvania: [{ column: 33, row: 13 }, { column: 34, row: 13 }],
+	'rhode-island': [{ column: 45, row: 8 }],
+	'south-carolina': [{ column: 38, row: 25 }],
+	'south-dakota': [{ column: 13, row: 7 }, { column: 14, row: 7 }, { column: 15, row: 7 }],
+	tennessee: [{ column: 21, row: 20 }, { column: 27, row: 20 }],
+	texas: [{ column: 10, row: 18 }, { column: 9, row: 19 }, { column: 10, row: 19 }, { column: 9, row: 21 }, { column: 9, row: 22 }, { column: 16, row: 22 }, { column: 10, row: 23 }, { column: 15, row: 23 }, { column: 16, row: 23 }, { column: 9, row: 24 }, { column: 15, row: 24 }, { column: 10, row: 25 }, { column: 11, row: 26 }, { column: 12, row: 26 }],
+	utah: [{ column: 7, row: 9 }],
+	washington: [{ column: 1, row: 5 }, { column: 4, row: 7 }],
+	'west-virginia': [{ column: 33, row: 14 }, { column: 34, row: 14 }, { column: 31, row: 16 }],
+	wisconsin: [{ column: 24, row: 6 }, { column: 24, row: 7 }, { column: 21, row: 8 }, { column: 24, row: 8 }],
+	wyoming: [{ column: 9, row: 7 }, { column: 10, row: 7 }, { column: 11, row: 7 }],
+};

@@ -147,7 +147,31 @@ const summary = [
 		position: relative;
 		display: inline-block;
 		width: 1ch;
-		overflow: hidden;
+		/* Fixed at the glyph's own natural size, always — this is what the counter (and so the
+		   whole .bar flex row) measures for layout. Letting the clip tokens resize this box was
+		   the earlier bug: shrinking it shrank the counter, which shrank .bar's own auto height,
+		   which dragged the track up along with it. Everything the clip tokens touch below is
+		   position:absolute, so none of it can leak into surrounding layout again. */
+		height: 1em;
+	}
+
+	/* The real clip: clip-path changes what's painted without ever changing this element's own
+	   layout size, unlike resizing the box. Negative inset values (positive clip tokens) extend
+	   the visible region beyond the slot's natural edge; positive inset values (negative clip
+	   tokens) shrink it inward, cutting into the settled digit — both by design. */
+	:global(.bar__slot-clip) {
+		position: absolute;
+		inset: 0;
+		clip-path: inset(
+			calc(-1 * var(--bop-slot-clip-top)) 0 calc(-1 * var(--bop-slot-clip-bottom)) 0
+		);
+	}
+
+	/* Always exactly the slot's natural 1em box, regardless of the clip tokens — the digits
+	   inside never move; only how much of them is visible changes. */
+	:global(.bar__slot-reel) {
+		position: absolute;
+		inset: 0;
 	}
 
 	:global(.bar__slot-spacer) {
@@ -160,6 +184,26 @@ const summary = [
 		display: flex;
 		align-items: center;
 		justify-content: center;
+	}
+
+	/* Debug: independent of the clipped content above, so they stay visible even when the clip
+	   boundary extends past the slot's own box. */
+	:global(.bar__slot-clip-line) {
+		display: none;
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 1px;
+		background: purple;
+		pointer-events: none;
+	}
+
+	:global(.bar__slot-clip-line--top) {
+		top: calc(-1 * var(--bop-slot-clip-top));
+	}
+
+	:global(.bar__slot-clip-line--bottom) {
+		bottom: calc(-1 * var(--bop-slot-clip-bottom));
 	}
 
 	.bar__track {

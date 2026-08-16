@@ -217,11 +217,23 @@ const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number)
 		const slot = document.createElement('span');
 		slot.className = 'bar__slot';
 
+		// The clip-path'd wrapper: what actually gets hidden as the clip tokens move, without
+		// ever changing .bar__slot's own (and so the counter's, and so .bar's) layout size.
+		const clip = document.createElement('span');
+		clip.className = 'bar__slot-clip';
+		slot.append(clip);
+
+		// Holds the actual digits at the slot's fixed natural size — they never move; only how
+		// much of them the clip wrapper above reveals changes.
+		const reel = document.createElement('span');
+		reel.className = 'bar__slot-reel';
+		clip.append(reel);
+
 		const spacer = document.createElement('span');
 		spacer.className = 'bar__slot-spacer';
 		spacer.setAttribute('aria-hidden', 'true');
 		spacer.textContent = '0';
-		slot.append(spacer);
+		reel.append(spacer);
 
 		const digitSpans: HTMLElement[] = [];
 
@@ -231,9 +243,18 @@ const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number)
 			// The reel still starts at position 0 for a new slot, but that zero was never
 			// really "there" — leave it blank so the slot looks like it grows in from empty.
 			digitSpan.textContent = isNewSlot && digit === 0 ? '' : String(digit);
-			slot.append(digitSpan);
+			reel.append(digitSpan);
 			digitSpans.push(digitSpan);
 		}
+
+		// Debug: outside the clipped wrapper, so they stay visible past the natural edge.
+		const topLine = document.createElement('span');
+		topLine.className = 'bar__slot-clip-line bar__slot-clip-line--top';
+		slot.append(topLine);
+
+		const bottomLine = document.createElement('span');
+		bottomLine.className = 'bar__slot-clip-line bar__slot-clip-line--bottom';
+		slot.append(bottomLine);
 
 		fragment.append(slot);
 		slots.push({ digitSpans, place });

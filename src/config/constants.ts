@@ -105,6 +105,21 @@ export const MAP_GEOMETRY = {
 	/** 0 reproduces the source map's spacing; 1 pulls states as close together as they'll go
 	 *  without any two touching more than edge-to-edge. */
 	stateSpacingTightness: 0,
+	/** Outward padding, in grid cells, for each tile's hover hit-box. Every different-state tile
+	 *  pair on the map is at least 1 cell apart, so anything under 0.5 here can never make two
+	 *  states' hit-boxes touch — verified directly against the map data, not assumed. */
+	hitAreaInset: 0.4,
+	/**
+	 * A state's bounce scale — shared by hover (sustained) and click (a momentary pop past this
+	 * same value) — is 1 + bounceGrowthTarget / size, where size is the state's own bounding-box
+	 * span in grid cells. Every state grows by roughly the same absolute amount instead of the
+	 * same percentage, which used to make Texas visibly balloon while Rhode Island barely moved.
+	 * Clamped so tiny states don't blow past the ceiling, and huge ones (California) don't shrink
+	 * to nothing.
+	 */
+	bounceGrowthTarget: 0.7,
+	bounceScaleMin: 1.06,
+	bounceScaleMax: 1.28,
 } as const;
 
 export const NUMBER_ANIMATION_MODE = {
@@ -135,6 +150,7 @@ export const CUSTOM_PROPERTY = {
 	countDigits: '--bop-count-digits',
 	countBlurMax: '--bop-count-blur-max',
 	countBlurFraction: '--bop-count-blur-fraction',
+	stateHoverScale: '--bop-state-hover-scale',
 } as const;
 
 export const PARTY_LABEL = {

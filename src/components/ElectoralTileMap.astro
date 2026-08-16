@@ -1,13 +1,14 @@
 ---
 import {
 	CANDIDATE_NAME,
+	CUSTOM_PROPERTY,
 	DATA_ATTRIBUTE,
 	MAP_ASSIGNMENT_LABEL,
 	MAP_GEOMETRY,
 	PARTY,
 	type Party,
 } from '../config/constants';
-import { ELECTORAL_STATES, type ElectoralState } from '../data/electoral-map';
+import { ELECTORAL_STATES, EXTRA_HIT_AREA_CELLS, type ElectoralState } from '../data/electoral-map';
 import {
 	applyStateSpacing,
 	electoralMapExtent,
@@ -18,7 +19,8 @@ import {
 import '../styles/fonts.css';
 import '../styles/tokens.css';
 
-const { cell, tileGap, stateSpacingTightness } = MAP_GEOMETRY;
+const { cell, tileGap, stateSpacingTightness, hitAreaInset, bounceGrowthTarget, bounceScaleMin, bounceScaleMax } =
+	MAP_GEOMETRY;
 
 const states = applyStateSpacing(ELECTORAL_STATES, stateSpacingTightness);
 const extent = electoralMapExtent(states);
@@ -50,6 +52,46 @@ const tilesOf = (state: ElectoralState) =>
 // the assignment a click cycles away from.
 const initialPartyOf = (state: ElectoralState): Party => expandStateTiles(state)[0].party;
 
+// A state's own bounding-box span, in grid cells — how far a point at its edge sits from the
+// center the bounce scale grows around.
+const stateSizeOf = (state: ElectoralState): number => {
+	const tiles = expandStateTiles(state);
+	const columns = tiles.map(({ column }) => column);
+	const rows = tiles.map(({ row }) => row);
+
+	return Math.max(Math.max(...columns) - Math.min(...columns), Math.max(...rows) - Math.min(...rows)) + 1;
+};
+
+// Scaling every state by the same percentage made big states balloon and small ones barely
+// move, since percentage growth on a bigger box is more pixels. This targets roughly the same
+// absolute growth for everyone instead, clamped so tiny states don't exceed the ceiling and huge
+// ones (California) don't shrink to nothing. Drives both hover and the click bounce, so the two
+// stay proportionate to each other as well as to state size.
+const bounceScaleOf = (state: ElectoralState): number => {
+	const raw = 1 + bounceGrowthTarget / stateSizeOf(state);
+
+	return Math.min(bounceScaleMax, Math.max(bounceScaleMin, raw));
+};
+
+// One hit-box per tile rather than one for the whole state's bounding box: a jagged, concave
+// shape's bbox (California's diagonal coastline, say) can span clear across a neighboring
+// state sitting in the notch. Per-tile boxes stay local, so that can't happen — every different
+// -state tile pair on the map is at least 1 cell apart, well outside this padding.
+//
+// EXTRA_HIT_AREA_CELLS is written in ELECTORAL_STATES' raw grid coordinates, not the
+// spacing-adjusted ones below — fine at the current stateSpacingTightness: 0 (identity), but
+// would need its own pull applied if that ever changes.
+const hitAreaTilesOf = (state: ElectoralState) => {
+	const ownTiles = expandStateTiles(state).map(({ column, row }) => ({ column, row }));
+	const extraCells = EXTRA_HIT_AREA_CELLS[state.id] ?? [];
+
+	return [...ownTiles, ...extraCells].map(({ column, row }) => ({
+		x: (column - hitAreaInset) * cell,
+		y: (row - hitAreaInset) * cell,
+		size: (1 + 2 * hitAreaInset) * cell,
+	}));
+};
+
 const tileSize = cell - tileGap;
 ---
 
@@ -70,6 +112,7 @@ const tileSize = cell - tileGap;
 						role="button"
 						tabindex="0"
 						aria-label={`${state.label}, ${MAP_ASSIGNMENT_LABEL[initialParty]}`}
+						style={{ [CUSTOM_PROPERTY.stateHoverScale]: bounceScaleOf(state) }}
 						{...{
 							[DATA_ATTRIBUTE.mapState]: '',
 							[DATA_ATTRIBUTE.currentParty]: initialParty,
@@ -77,23 +120,43 @@ const tileSize = cell - tileGap;
 							[DATA_ATTRIBUTE.labelOverTiles]: String(labelOverTiles),
 						}}
 					>
-						{tilesOf(state).map((tile) => (
+						{/* Invisible and never scaled — this is what :hover is actually tested against.
+						The visible tiles below scale on hover, which moves their edges; hover-testing
+						against those directly can drop and re-trigger :hover right at an edge, on a
+						jagged state, in a tight flickering loop. This sits still underneath instead. */}
+						{hitAreaTilesOf(state).map((hitArea) => (
 							<rect
-								class:list={['map__tile', tile.partyClass]}
-								x={tile.x}
-								y={tile.y}
-								width={tileSize}
-								height={tileSize}
+								class="map__state-hit-area"
+								x={hitArea.x}
+								y={hitArea.y}
+								width={hitArea.size}
+								height={hitArea.size}
 							/>
 						))}
-						<text
-							class:list={['map__label', labelOverTiles && 'map__label--knockout']}
-							x={state.labelColumn * cell}
-							y={state.labelRow * cell}
-							text-anchor="middle"
-						>
-							{state.label}
-						</text>
+						{/* Holds the hover scale. Separate from .map__state-bounce below, so the click
+						bounce and the sustained hover scale multiply together instead of both fighting
+						over one element's transform. */}
+						<g class="map__state-hover">
+							<g class="map__state-bounce">
+								{tilesOf(state).map((tile) => (
+									<rect
+										class:list={['map__tile', tile.partyClass]}
+										x={tile.x}
+										y={tile.y}
+										width={tileSize}
+										height={tileSize}
+									/>
+								))}
+								<text
+									class:list={['map__label', labelOverTiles && 'map__label--knockout']}
+									x={state.labelColumn * cell}
+									y={state.labelRow * cell}
+									text-anchor="middle"
+								>
+									{state.label}
+								</text>
+							</g>
+						</g>
 					</g>
 				);
 			})
@@ -155,7 +218,32 @@ const tileSize = cell - tileGap;
 		fill: var(--bop-color-page);
 	}
 
-	.map__state {
+	/* Invisible and, critically, never scaled — see the markup comment above it for why.
+	   pointer-events:all keeps it hit-testable regardless of the transparent fill. */
+	.map__state-hit-area {
+		fill: transparent;
+		pointer-events: all;
+	}
+
+	/* Hover: a transition (not the click keyframes below) so it holds at the scaled-up size for
+	   as long as the cursor stays, rather than settling back to 1 mid-hover — it only eases back
+	   down once the cursor actually leaves. :hover here is tested against .map__state, which
+	   includes the fixed hit-area above — not against this element's own (moving) box, so scaling
+	   it can never itself cause :hover to drop. Separate from the click bounce's own transform on
+	   .map__state-bounce below, so a mid-hover click doesn't have both fighting to control the
+	   same element's transform (which snapped visibly to the animation's own 0% keyframe,
+	   ignoring wherever the hover transition currently had it). */
+	.map__state-hover {
+		transform-box: fill-box;
+		transform-origin: center;
+		transition: transform var(--bop-map-hover-duration) var(--bop-digit-easing);
+	}
+
+	.map__state:hover .map__state-hover {
+		transform: scale(var(--bop-state-hover-scale));
+	}
+
+	.map__state-bounce {
 		transform-box: fill-box;
 		transform-origin: center;
 	}
@@ -166,7 +254,7 @@ const tileSize = cell - tileGap;
 		}
 
 		45% {
-			transform: scale(var(--bop-map-click-scale));
+			transform: scale(var(--bop-state-hover-scale));
 		}
 
 		100% {
@@ -175,8 +263,12 @@ const tileSize = cell - tileGap;
 	}
 
 	/* The whole state — every tile and its label — scales together as one rigid block, around
-	   the group's own bounding-box center, instead of each tile popping independently. */
-	.map__state[data-state-activating] {
+	   the group's own bounding-box center, instead of each tile popping independently. Peaks at
+	   the same per-state scale hover holds at, so a click's pop and a hover's sustained grow feel
+	   like the same effect rather than two differently-sized ones. Always starts and ends at
+	   scale(1) on its own layer, so it composes multiplicatively with the outer group's hover
+	   scale rather than overriding it. */
+	.map__state[data-state-activating] .map__state-bounce {
 		animation: map-state-click var(--bop-map-click-duration) var(--bop-digit-easing);
 	}
 </style>
