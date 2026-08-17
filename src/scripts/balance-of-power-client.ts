@@ -26,10 +26,13 @@ type PanelSnapshot = {
 	segmentWidths: number[];
 };
 
-/** One digit place's wheel: ten stacked digit spans, and the place value (1, 10, 100, ...) it represents. */
+/** One digit place's wheel: ten stacked digit spans, the place value (1, 10, 100, ...) it
+ *  represents, and whether the place itself is newly appearing rather than rolling from a digit
+ *  that was actually on screen. */
 type DigitSlot = {
 	digitSpans: HTMLElement[];
 	place: number;
+	isNewSlot: boolean;
 };
 
 const pendingCountUps = new WeakMap<HTMLElement, number>();
@@ -204,7 +207,12 @@ const popInDigits = (element: HTMLElement, value: number): void => {
 // One slot per digit place; each holds all ten digits, and a single "reel position" per slot
 // (fromDigit easing to toDigit) decides which one is centered — the same math the source uses
 // to keep every stacked digit positioned sensibly relative to whichever one is currently showing.
-const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number): DigitSlot[] => {
+const buildDigitSlots = (
+	counter: HTMLElement,
+	from: number,
+	to: number,
+	digitCount: number,
+): DigitSlot[] => {
 	const fragment = document.createDocumentFragment();
 	const slots: DigitSlot[] = [];
 	// A slot's place is beyond what `from` needed to be written out, so it's animating in
@@ -214,6 +222,10 @@ const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number)
 	for (let position = 0; position < digitCount; position += 1) {
 		const place = 10 ** (digitCount - position - 1);
 		const isNewSlot = place >= highestExistingPlace;
+		// A new slot that settles on 0 (say, the tens place of 306) must render that 0 for
+		// real — blanking it below would otherwise leave the slot permanently empty, since
+		// its reel never has to move off of digit 0 to reach its target.
+		const toDigit = Math.floor(to / place) % DIGIT_WHEEL_SIZE;
 		const slot = document.createElement('span');
 		slot.className = 'bar__slot';
 
@@ -241,8 +253,9 @@ const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number)
 			const digitSpan = document.createElement('span');
 			digitSpan.className = 'bar__slot-digit';
 			// The reel still starts at position 0 for a new slot, but that zero was never
-			// really "there" — leave it blank so the slot looks like it grows in from empty.
-			digitSpan.textContent = isNewSlot && digit === 0 ? '' : String(digit);
+			// really "there" — leave it blank so the slot looks like it grows in from empty,
+			// unless 0 is also where the reel is going to end up.
+			digitSpan.textContent = isNewSlot && digit === 0 && toDigit !== 0 ? '' : String(digit);
 			reel.append(digitSpan);
 			digitSpans.push(digitSpan);
 		}
@@ -257,7 +270,7 @@ const buildDigitSlots = (counter: HTMLElement, from: number, digitCount: number)
 		slot.append(bottomLine);
 
 		fragment.append(slot);
-		slots.push({ digitSpans, place });
+		slots.push({ digitSpans, place, isNewSlot });
 	}
 
 	counter.replaceChildren(fragment);
@@ -292,7 +305,7 @@ const slideDigits = (
 		cancelAnimationFrame(pending);
 	}
 
-	const slots = buildDigitSlots(element, from, String(to).length);
+	const slots = buildDigitSlots(element, from, to, String(to).length);
 	const slotHeight = slots[0]?.digitSpans[0]?.getBoundingClientRect().height ?? 0;
 
 	const applyProgress = (linearProgress: number): void => {
@@ -303,9 +316,13 @@ const slideDigits = (
 			String(Math.round(from + (to - from) * easedProgress)),
 		);
 
-		slots.forEach(({ digitSpans, place }) => {
-			const fromDigit = Math.floor(from / place) % DIGIT_WHEEL_SIZE;
+		slots.forEach(({ digitSpans, place, isNewSlot }) => {
 			const toDigit = Math.floor(to / place) % DIGIT_WHEEL_SIZE;
+			// A new slot settling on 0 has nowhere to roll from — 0 is both its literal `from`
+			// digit and its target, so the reel would never move. -1 (the wheel's 9, one step
+			// back) gives it the same "rolling in" motion every other new slot gets.
+			const fromDigit =
+				isNewSlot && toDigit === 0 ? -1 : Math.floor(from / place) % DIGIT_WHEEL_SIZE;
 			const reelPosition = fromDigit + (toDigit - fromDigit) * easedProgress;
 
 			positionDigitSlot(digitSpans, reelPosition, slotHeight);

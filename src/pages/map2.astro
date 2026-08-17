@@ -1,0 +1,62 @@
+---
+import BalanceOfPower from '../components/BalanceOfPower.astro';
+import { NUMBER_ANIMATION_MODE } from '../config/constants';
+import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Balance of power</title>
+		{
+			FRANKLIN_WEIGHTS.map((weight) => (
+				<link
+					rel="preload"
+					as="font"
+					type="font/woff2"
+					href={franklinFontUrl(weight)}
+					crossorigin
+				/>
+			))
+		}
+	</head>
+	<body>
+		<main>
+			<div class="widget">
+				<BalanceOfPower numberAnimationMode={NUMBER_ANIMATION_MODE.slide} />
+			</div>
+		</main>
+
+		<style>
+			body {
+				margin: 0;
+				background: var(--bop-color-page);
+			}
+
+			main {
+				box-sizing: border-box;
+				display: flex;
+				/* "safe" falls back to top-alignment once the widget is taller than the viewport —
+				   plain center would otherwise center the overflow itself, pushing the top of the
+				   widget below the fold with no way to scroll up to it. */
+				align-items: safe center;
+				justify-content: center;
+				min-height: 100svh;
+				padding: 40px 16px;
+			}
+
+			.widget {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 12px;
+				width: 100%;
+				max-width: var(--bop-map-width);
+			}
+		</style>
+	</body>
+</html>

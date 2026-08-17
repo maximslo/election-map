@@ -1,5 +1,10 @@
 ---
-import { CUSTOM_PROPERTY, DATA_ATTRIBUTE, DEFAULT_CHAMBER_ID } from '../config/constants';
+import {
+	CUSTOM_PROPERTY,
+	DATA_ATTRIBUTE,
+	DEFAULT_CHAMBER_ID,
+	type NumberAnimationMode,
+} from '../config/constants';
 import { CHAMBERS, type Chamber } from '../data/chambers';
 import { widestCountDigits } from '../lib/balance-of-power';
 import '../styles/fonts.css';
@@ -9,9 +14,11 @@ import ChamberSwitcher from './ChamberSwitcher.astro';
 
 type Props = {
 	activeId?: Chamber['id'];
+	numberAnimationMode?: NumberAnimationMode;
+	showSwitcher?: boolean;
 };
 
-const { activeId = DEFAULT_CHAMBER_ID } = Astro.props;
+const { activeId = DEFAULT_CHAMBER_ID, numberAnimationMode, showSwitcher = true } = Astro.props;
 
 const tabIdFor = (chamber: Chamber) => `chamber-tab-${chamber.id}`;
 const panelIdFor = (chamber: Chamber) => `chamber-panel-${chamber.id}`;
@@ -20,10 +27,23 @@ const panelIdFor = (chamber: Chamber) => `chamber-panel-${chamber.id}`;
 <section
 	class="balance"
 	aria-label="Balance of power"
-	style={{ [CUSTOM_PROPERTY.countDigits]: widestCountDigits(CHAMBERS) }}
-	{...{ [DATA_ATTRIBUTE.root]: '' }}
+	style={{
+		[CUSTOM_PROPERTY.countDigits]: widestCountDigits(CHAMBERS),
+		[CUSTOM_PROPERTY.switcherGap]: showSwitcher ? undefined : '0px',
+	}}
+	{...{
+		[DATA_ATTRIBUTE.root]: '',
+		[DATA_ATTRIBUTE.numberAnimationMode]: numberAnimationMode,
+	}}
 >
-	<ChamberSwitcher chambers={CHAMBERS} activeId={activeId} tabIdFor={tabIdFor} panelIdFor={panelIdFor} />
+	{
+		/* Stays in the DOM even when hidden: the switcher is what tells the map (and the
+		client-side reveal logic) which chamber is active, so hiding it visually can't mean
+		leaving it out of the markup. */
+	}
+	<div class="balance__switcher" hidden={!showSwitcher}>
+		<ChamberSwitcher chambers={CHAMBERS} activeId={activeId} tabIdFor={tabIdFor} panelIdFor={panelIdFor} />
+	</div>
 
 	{
 		CHAMBERS.map((chamber) => (
@@ -60,6 +80,10 @@ const panelIdFor = (chamber: Chamber) => `chamber-panel-${chamber.id}`;
 		width: 100%;
 		max-width: var(--bop-width);
 		font-family: var(--bop-font-family);
+	}
+
+	.balance__switcher[hidden] {
+		display: none;
 	}
 
 	.balance__panel {

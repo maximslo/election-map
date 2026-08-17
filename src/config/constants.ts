@@ -155,6 +155,7 @@ export const CUSTOM_PROPERTY = {
 	countBlurMax: '--bop-count-blur-max',
 	countBlurFraction: '--bop-count-blur-fraction',
 	stateHoverScale: '--bop-state-hover-scale',
+	switcherGap: '--bop-switcher-gap',
 } as const;
 
 export const PARTY_LABEL = {
