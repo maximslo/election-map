@@ -95,6 +95,35 @@
 	   lingering settle instead of a snap. */
 	--bop-map-hover-exit-duration: 700ms;
 
+	/* The wave a click sends across the states it didn't land on. Delay is per grid cell of
+	   distance from the clicked state, so the map's 52-cell diagonal takes ~470ms to cross —
+	   slow enough to read as travelling outward, quick enough that the far corner isn't still
+	   moving after the eye has moved on. Amplitude is a fraction of the state's own click-pop
+	   growth, so a rippling state can never out-move the state actually clicked. */
+	--bop-map-ripple-duration: 300ms;
+	--bop-map-ripple-cell-delay: 9ms;
+	/* Hover holds the pose instead of popping it, and gets a slower, purely decelerating curve:
+	   the cursor can re-aim the whole map at any moment, and a springy curve would put a wobble
+	   on every one of those redirects. */
+	--bop-map-ripple-hover-duration: 420ms;
+	--bop-map-ripple-hover-easing: cubic-bezier(0.22, 0.61, 0.36, 1);
+	--bop-map-ripple-amplitude: 0.55;
+	/* SVG user units — one grid cell is 10, so this is roughly 2px on screen at render size. */
+	--bop-map-ripple-nudge: 3px;
+	/* Burst pushes every state the same distance regardless of how far it sits from the origin, so
+	   unlike the wave's nudge above there's no travelling front for the eye to track. How far it
+	   has to travel to register depends entirely on the trigger: a click pops out and comes
+	   straight back, and the movement itself is the event, so it reads at a fraction of the
+	   distance the hover pose needs — that one is held motionless for as long as the cursor stays,
+	   with nothing in flight to catch the eye, so it takes better than a full grid cell. */
+	--bop-map-ripple-burst-nudge: 6px;
+	--bop-map-ripple-burst-hold-nudge: 14px;
+	--bop-map-ripple-fade: 0.35;
+	--bop-map-ripple-reach: 44;
+	/* Strength decays linearly with distance but stops here rather than at zero: tiles render
+	   around 6px, so an unfloored tail moves the far half of the map by less than a pixel. */
+	--bop-map-ripple-floor: 0.35;
+
 	/* Motion-blur count-up: blur is loudest at the very start and decays linearly to zero by
 	   --bop-count-blur-fraction of the way through the reveal — a duration of its own, so it
 	   isn't at the mercy of how quickly the tail-heavy reveal curve above happens to decelerate. */
@@ -110,5 +139,8 @@
 		--bop-map-click-duration: 0ms;
 		--bop-map-hover-duration: 0ms;
 		--bop-map-hover-exit-duration: 0ms;
+		--bop-map-ripple-duration: 0ms;
+		--bop-map-ripple-cell-delay: 0ms;
+		--bop-map-ripple-hover-duration: 0ms;
 	}
 }

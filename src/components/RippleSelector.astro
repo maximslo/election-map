@@ -1,0 +1,133 @@
+---
+import {
+	DATA_ATTRIBUTE,
+	MAP_RIPPLE_MODE,
+	MAP_RIPPLE_MODE_INPUT_NAME,
+	MAP_RIPPLE_REACH,
+	MAP_RIPPLE_REACH_INPUT_NAME,
+	MAP_RIPPLE_TRIGGER,
+	MAP_RIPPLE_TRIGGER_INPUT_NAME,
+	type MapRippleMode,
+	type MapRippleReach,
+	type MapRippleTrigger,
+} from '../config/constants';
+
+type Props = {
+	mode: MapRippleMode;
+	reach: MapRippleReach;
+	trigger: MapRippleTrigger;
+};
+
+const { mode, reach, trigger } = Astro.props;
+
+const MODE_OPTIONS = [
+	{ value: MAP_RIPPLE_MODE.off, label: 'Off' },
+	{ value: MAP_RIPPLE_MODE.pop, label: 'Pop' },
+	{ value: MAP_RIPPLE_MODE.nudge, label: 'Nudge' },
+	{ value: MAP_RIPPLE_MODE.burst, label: 'Burst' },
+	{ value: MAP_RIPPLE_MODE.popNudge, label: 'Pop + nudge' },
+	{ value: MAP_RIPPLE_MODE.popFade, label: 'Pop + fade' },
+] as const;
+
+const REACH_OPTIONS = [
+	{ value: MAP_RIPPLE_REACH.map, label: 'Whole map' },
+	{ value: MAP_RIPPLE_REACH.nearby, label: 'Nearby' },
+] as const;
+
+const TRIGGER_OPTIONS = [
+	{ value: MAP_RIPPLE_TRIGGER.click, label: 'Click' },
+	{ value: MAP_RIPPLE_TRIGGER.hover, label: 'Hover' },
+] as const;
+---
+
+<div class="ripple-selector" {...{ [DATA_ATTRIBUTE.rippleSelector]: '' }}>
+	<fieldset class="ripple-selector__group">
+		<legend class="ripple-selector__legend">Ripple</legend>
+		{
+			MODE_OPTIONS.map((option) => (
+				<label class="ripple-selector__option">
+					<input
+						type="radio"
+						name={MAP_RIPPLE_MODE_INPUT_NAME}
+						value={option.value}
+						checked={option.value === mode}
+					/>
+					{option.label}
+				</label>
+			))
+		}
+	</fieldset>
+	<fieldset class="ripple-selector__group">
+		<legend class="ripple-selector__legend">Reach</legend>
+		{
+			REACH_OPTIONS.map((option) => (
+				<label class="ripple-selector__option">
+					<input
+						type="radio"
+						name={MAP_RIPPLE_REACH_INPUT_NAME}
+						value={option.value}
+						checked={option.value === reach}
+					/>
+					{option.label}
+				</label>
+			))
+		}
+	</fieldset>
+	<fieldset class="ripple-selector__group">
+		<legend class="ripple-selector__legend">Trigger</legend>
+		{
+			TRIGGER_OPTIONS.map((option) => (
+				<label class="ripple-selector__option">
+					<input
+						type="radio"
+						name={MAP_RIPPLE_TRIGGER_INPUT_NAME}
+						value={option.value}
+						checked={option.value === trigger}
+					/>
+					{option.label}
+				</label>
+			))
+		}
+	</fieldset>
+</div>
+
+<style>
+	.ripple-selector {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		width: 100%;
+		max-width: var(--bop-map-width);
+		font-family: var(--bop-font-family);
+		font-size: 13px;
+	}
+
+	.ripple-selector__group {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	.ripple-selector__legend {
+		padding: 0;
+		font-weight: 600;
+		color: var(--bop-color-ink);
+	}
+
+	.ripple-selector__option {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		color: var(--bop-color-tab-idle-text);
+		white-space: nowrap;
+		cursor: pointer;
+	}
+
+	.ripple-selector__option:has(input:checked) {
+		color: var(--bop-color-ink);
+	}
+</style>

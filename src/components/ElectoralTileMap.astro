@@ -5,7 +5,13 @@ import {
 	DATA_ATTRIBUTE,
 	MAP_ASSIGNMENT_LABEL,
 	MAP_GEOMETRY,
+	MAP_RIPPLE_MODE,
+	MAP_RIPPLE_REACH,
+	MAP_RIPPLE_TRIGGER,
 	PARTY,
+	type MapRippleMode,
+	type MapRippleReach,
+	type MapRippleTrigger,
 	type Party,
 } from '../config/constants';
 import { ELECTORAL_STATES, EXTRA_HIT_AREA_CELLS, type ElectoralState } from '../data/electoral-map';
@@ -14,10 +20,23 @@ import {
 	electoralMapExtent,
 	expandStateTiles,
 	isLabelOverTiles,
+	stateCenter,
 	tallyElectoralVotes,
 } from '../lib/electoral-map';
 import '../styles/fonts.css';
 import '../styles/tokens.css';
+
+type Props = {
+	rippleMode?: MapRippleMode;
+	rippleReach?: MapRippleReach;
+	rippleTrigger?: MapRippleTrigger;
+};
+
+const {
+	rippleMode = MAP_RIPPLE_MODE.off,
+	rippleReach = MAP_RIPPLE_REACH.map,
+	rippleTrigger = MAP_RIPPLE_TRIGGER.click,
+} = Astro.props;
 
 const {
 	cell,
@@ -105,7 +124,12 @@ const tileSize = cell - tileGap;
 
 <figure
 	class="map"
-	{...{ [DATA_ATTRIBUTE.electoralMap]: '' }}
+	{...{
+		[DATA_ATTRIBUTE.electoralMap]: '',
+		[DATA_ATTRIBUTE.rippleMode]: rippleMode,
+		[DATA_ATTRIBUTE.rippleReach]: rippleReach,
+		[DATA_ATTRIBUTE.rippleTrigger]: rippleTrigger,
+	}}
 	hidden
 >
 	<svg class="map__canvas" viewBox={viewBox} role="img" aria-label={summary}>
@@ -113,6 +137,7 @@ const tileSize = cell - tileGap;
 			states.map((state) => {
 				const initialParty = initialPartyOf(state);
 				const labelOverTiles = isLabelOverTiles(state);
+				const center = stateCenter(state);
 
 				return (
 					<g
@@ -126,6 +151,8 @@ const tileSize = cell - tileGap;
 							[DATA_ATTRIBUTE.currentParty]: initialParty,
 							[DATA_ATTRIBUTE.electoralVotes]: state.electoralVotes,
 							[DATA_ATTRIBUTE.labelOverTiles]: String(labelOverTiles),
+							[DATA_ATTRIBUTE.centerColumn]: center.column,
+							[DATA_ATTRIBUTE.centerRow]: center.row,
 						}}
 					>
 						{/* Invisible and never scaled — this is what :hover is actually tested against.
@@ -283,5 +310,135 @@ const tileSize = cell - tileGap;
 	   scale rather than overriding it. */
 	.map__state[data-state-activating] .map__state-bounce {
 		animation: map-state-click var(--bop-map-click-duration) var(--bop-digit-easing);
+	}
+
+	/* The ripple. The interaction script only ever publishes geometry onto a state —
+	   --bop-state-ripple-distance in grid cells, plus a unit vector pointing away from the origin
+	   — and everything below turns that into motion. Keeping the decay, the amplitude and the
+	   wave speed here rather than in JS is what lets the reduced-motion block in tokens.css
+	   switch the whole effect off by zeroing durations.
+
+	   Every mode boils down to one pose, --ripple-pose, plus how long a state waits before
+	   striking it. The click and hover triggers then reach that same pose two different ways:
+	   click replays it as a keyframe pop, hover holds it with a transition. */
+	.map__state {
+		--ripple-strength: max(
+			var(--bop-map-ripple-floor),
+			1 - var(--bop-state-ripple-distance, 0) / var(--bop-map-ripple-reach)
+		);
+		--ripple-peak: calc(
+			1 + (var(--bop-state-hover-scale) - 1) * var(--bop-map-ripple-amplitude) *
+				var(--ripple-strength)
+		);
+		--ripple-shift-x: calc(
+			var(--bop-state-ripple-direction-x, 0) * var(--bop-map-ripple-nudge) *
+				var(--ripple-strength)
+		);
+		--ripple-shift-y: calc(
+			var(--bop-state-ripple-direction-y, 0) * var(--bop-map-ripple-nudge) *
+				var(--ripple-strength)
+		);
+		--ripple-delay: calc(var(--bop-state-ripple-distance, 0) * var(--bop-map-ripple-cell-delay));
+		/* Burst deliberately drops the distance falloff — every state travels the same distance,
+		   so the map opens away from the click as one piece. Reach still has to mean something
+		   though, so the strength above is collapsed to a plain in-or-out gate: scaling it past 1
+		   before the clamp turns any non-zero strength into 1, and only a state the reach has
+		   already zeroed stays at 0. */
+		--burst-gate: clamp(0, var(--ripple-strength) * 1000, 1);
+		--burst-shift-x: calc(
+			var(--bop-state-ripple-direction-x, 0) * var(--burst-nudge) * var(--burst-gate)
+		);
+		--burst-shift-y: calc(
+			var(--bop-state-ripple-direction-y, 0) * var(--burst-nudge) * var(--burst-gate)
+		);
+
+		/* Filled in by the per-mode rules below. */
+		--ripple-pose: none;
+		--ripple-pose-opacity: 1;
+	}
+
+	/* How far a burst travels is the one thing the trigger changes about the pose itself, rather
+	   than about how it's reached — see the tokens for why a held pose needs so much more of it. */
+	.map {
+		--burst-nudge: var(--bop-map-ripple-burst-nudge);
+	}
+
+	.map[data-ripple-trigger='hover'] {
+		--burst-nudge: var(--bop-map-ripple-burst-hold-nudge);
+	}
+
+	/* A short reach with no floor under it, so states past the wave's edge sit it out entirely
+	   instead of trailing off — the difference between a local jostle and a map-wide wave. */
+	.map[data-ripple-reach='nearby'] {
+		--bop-map-ripple-reach: 12;
+		--bop-map-ripple-floor: 0;
+	}
+
+	.map[data-ripple-mode='pop'] .map__state {
+		--ripple-pose: scale(var(--ripple-peak));
+	}
+
+	.map[data-ripple-mode='nudge'] .map__state {
+		--ripple-pose: translate(var(--ripple-shift-x), var(--ripple-shift-y));
+	}
+
+	/* The one mode that isn't a wave: no per-distance delay and no per-distance amplitude, so
+	   every state leaves at the same moment and travels the same distance, straight away from the
+	   origin. The map opens up around that state rather than a front crossing it. */
+	.map[data-ripple-mode='burst'] .map__state {
+		--ripple-pose: translate(var(--burst-shift-x), var(--burst-shift-y));
+		--ripple-delay: 0ms;
+	}
+
+	.map[data-ripple-mode='pop-nudge'] .map__state {
+		--ripple-pose: translate(var(--ripple-shift-x), var(--ripple-shift-y))
+			scale(var(--ripple-peak));
+	}
+
+	.map[data-ripple-mode='pop-fade'] .map__state {
+		--ripple-pose: scale(var(--ripple-peak));
+		--ripple-pose-opacity: calc(1 - var(--bop-map-ripple-fade) * var(--ripple-strength));
+	}
+
+	@keyframes map-state-ripple {
+		0%,
+		100% {
+			transform: none;
+			opacity: 1;
+		}
+
+		45% {
+			transform: var(--ripple-pose);
+			opacity: var(--ripple-pose-opacity);
+		}
+	}
+
+	/* A click is a discrete event, so it plays the pose out and back as a keyframe pop, peaking
+	   at 45% like the clicked state's own bounce and riding the same .map__state-bounce layer, so
+	   a state caught by the wave mid-hover still composes with the outer group's hover scale.
+	   animation-fill-mode:both holds the resting 0% frame through the delay — without it a state
+	   waiting its turn would sit at whatever the last wave left behind and then jump. */
+	.map[data-ripple-trigger='click'] .map__state[data-state-rippling] .map__state-bounce {
+		animation: map-state-ripple var(--bop-map-ripple-duration) var(--bop-digit-easing)
+			var(--ripple-delay) both;
+	}
+
+	/* Hover is a state, not an event, so it holds the pose for as long as the cursor stays and
+	   transitions rather than replays. That distinction is the whole reason moving between states
+	   is smooth: a keyframe restarted on every pointerenter cancels mid-flight and snaps the map
+	   back to rest first, whereas a transition re-aims from wherever each state currently sits
+	   and simply curves toward the new pose. The easing is a plain decelerate, not the springy
+	   --bop-digit-easing the pop uses — overshoot on every redirect reads as wobble. */
+	.map[data-ripple-trigger='hover'] .map__state-bounce {
+		transition:
+			transform var(--bop-map-ripple-hover-duration) var(--bop-map-ripple-hover-easing)
+				var(--ripple-delay),
+			opacity var(--bop-map-ripple-hover-duration) var(--bop-map-ripple-hover-easing)
+				var(--ripple-delay);
+	}
+
+	.map[data-ripple-trigger='hover'] .map__state[data-state-rippling] .map__state-bounce {
+		transform: var(--ripple-pose);
+		opacity: var(--ripple-pose-opacity);
 	}
 </style>

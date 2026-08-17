@@ -5,10 +5,12 @@ import {
 	MAP_ASSIGNMENT_LABEL,
 	MAP_ASSIGNMENT_TILE_CLASS,
 	MAP_RESULT_CHANGE_EVENT,
+	MAP_RIPPLE_TRIGGER,
 	PARTY,
 	type MapAssignment,
 	type MapResultDetail,
 } from '../config/constants';
+import { createRipplePlayer } from './electoral-map-ripple-client';
 
 const ACTIVATION_KEYS = ['Enter', ' '];
 
@@ -84,6 +86,7 @@ export const initElectoralMapInteraction = (): void => {
 	}
 
 	const stateGroups = Array.from(map.querySelectorAll<SVGGElement>(`[${DATA_ATTRIBUTE.mapState}]`));
+	const playRipple = createRipplePlayer(map, stateGroups);
 
 	const cycle = (stateGroup: SVGGElement): void => {
 		const current = stateGroup.getAttribute(DATA_ATTRIBUTE.currentParty) as MapAssignment;
@@ -91,6 +94,7 @@ export const initElectoralMapInteraction = (): void => {
 		paintStateGroup(stateGroup, nextAssignment(current));
 		bringToFront(stateGroup);
 		playClickAnimation(stateGroup);
+		playRipple(stateGroup, MAP_RIPPLE_TRIGGER.click);
 
 		document.dispatchEvent(
 			new CustomEvent<MapResultDetail>(MAP_RESULT_CHANGE_EVENT, { detail: tally(stateGroups) }),

@@ -25,6 +25,13 @@ export const DATA_ATTRIBUTE = {
 	electoralVotes: 'data-electoral-votes',
 	labelOverTiles: 'data-label-over-tiles',
 	stateActivating: 'data-state-activating',
+	stateRippling: 'data-state-rippling',
+	rippleMode: 'data-ripple-mode',
+	rippleReach: 'data-ripple-reach',
+	rippleTrigger: 'data-ripple-trigger',
+	rippleSelector: 'data-ripple-selector',
+	centerColumn: 'data-center-column',
+	centerRow: 'data-center-row',
 } as const;
 
 /** Dispatched by the map after a click changes a state's assignment, carrying the new totals. */
@@ -126,6 +133,46 @@ export const MAP_GEOMETRY = {
 	labelsVisible: false,
 } as const;
 
+/**
+ * How the states a click *didn't* land on react to it. A click always pops its own state;
+ * these decide what the wave travelling outward from it does to everyone else. "off"
+ * reproduces the original behaviour, where only the clicked state moves.
+ */
+export const MAP_RIPPLE_MODE = {
+	off: 'off',
+	pop: 'pop',
+	nudge: 'nudge',
+	/** The one mode that isn't a travelling wave: every state shoves away from the click at once. */
+	burst: 'burst',
+	popNudge: 'pop-nudge',
+	popFade: 'pop-fade',
+} as const;
+
+export type MapRippleMode = (typeof MAP_RIPPLE_MODE)[keyof typeof MAP_RIPPLE_MODE];
+
+/** How far the wave carries before it dies out — the whole map, or just the click's own corner. */
+export const MAP_RIPPLE_REACH = {
+	map: 'map',
+	nearby: 'nearby',
+} as const;
+
+export type MapRippleReach = (typeof MAP_RIPPLE_REACH)[keyof typeof MAP_RIPPLE_REACH];
+
+/**
+ * What sets the wave off. Clicking always cycles a state's assignment regardless — this only
+ * decides whether the states around it react to the click or to the cursor arriving.
+ */
+export const MAP_RIPPLE_TRIGGER = {
+	click: 'click',
+	hover: 'hover',
+} as const;
+
+export type MapRippleTrigger = (typeof MAP_RIPPLE_TRIGGER)[keyof typeof MAP_RIPPLE_TRIGGER];
+
+export const MAP_RIPPLE_MODE_INPUT_NAME = 'map-ripple-mode';
+export const MAP_RIPPLE_REACH_INPUT_NAME = 'map-ripple-reach';
+export const MAP_RIPPLE_TRIGGER_INPUT_NAME = 'map-ripple-trigger';
+
 export const NUMBER_ANIMATION_MODE = {
 	countUp: 'count-up',
 	popIn: 'pop-in',
@@ -156,6 +203,9 @@ export const CUSTOM_PROPERTY = {
 	countBlurFraction: '--bop-count-blur-fraction',
 	stateHoverScale: '--bop-state-hover-scale',
 	switcherGap: '--bop-switcher-gap',
+	stateRippleDistance: '--bop-state-ripple-distance',
+	stateRippleDirectionX: '--bop-state-ripple-direction-x',
+	stateRippleDirectionY: '--bop-state-ripple-direction-y',
 } as const;
 
 export const PARTY_LABEL = {

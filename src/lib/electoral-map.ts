@@ -126,7 +126,7 @@ export const tallyElectoralVotes = (states: ElectoralState[]): ElectoralTally =>
 	};
 };
 
-type Vector = { column: number; row: number };
+export type Vector = { column: number; row: number };
 
 type StateBlock = {
 	tiles: ElectoralTile[];
@@ -139,24 +139,34 @@ type StateBlock = {
 // avoidable gap on the table; finer buys precision the eye can't tell apart.
 const COMPACTION_SEARCH_STEPS = 40;
 
-const blockOf = (tiles: ElectoralTile[]): StateBlock => {
+const boundsOf = (tiles: ElectoralTile[]): StateBlock['bounds'] => {
 	const columns = tiles.map(({ column }) => column);
 	const rows = tiles.map(({ row }) => row);
-	const bounds = {
+
+	return {
 		minColumn: Math.min(...columns),
 		maxColumn: Math.max(...columns) + 1,
 		minRow: Math.min(...rows),
 		maxRow: Math.max(...rows) + 1,
 	};
+};
 
-	return {
-		tiles,
-		bounds,
-		center: {
-			column: (bounds.minColumn + bounds.maxColumn) / 2,
-			row: (bounds.minRow + bounds.maxRow) / 2,
-		},
-	};
+const centerOfBounds = ({ minColumn, maxColumn, minRow, maxRow }: StateBlock['bounds']): Vector => ({
+	column: (minColumn + maxColumn) / 2,
+	row: (minRow + maxRow) / 2,
+});
+
+/**
+ * The middle of a state's own bounding box, in grid cells — the point the click ripple measures
+ * every other state's distance from, and the point the bounce scales around.
+ */
+export const stateCenter = (state: ElectoralState): Vector =>
+	centerOfBounds(boundsOf(expandStateTiles(state)));
+
+const blockOf = (tiles: ElectoralTile[]): StateBlock => {
+	const bounds = boundsOf(tiles);
+
+	return { tiles, bounds, center: centerOfBounds(bounds) };
 };
 
 // Two unit tiles at these positions overlap iff they're within one full tile width of each other

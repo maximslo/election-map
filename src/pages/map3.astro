@@ -1,0 +1,104 @@
+---
+import BalanceOfPower from '../components/BalanceOfPower.astro';
+import ElectoralTileMap from '../components/ElectoralTileMap.astro';
+import RippleSelector from '../components/RippleSelector.astro';
+import {
+	MAP_RIPPLE_MODE,
+	MAP_RIPPLE_REACH,
+	MAP_RIPPLE_TRIGGER,
+	NUMBER_ANIMATION_MODE,
+	type ChamberId,
+} from '../config/constants';
+import { FRANKLIN_WEIGHTS, franklinFontUrl } from '../config/fonts';
+
+const PRESIDENT_CHAMBER_ID: ChamberId = 'president';
+
+// The selector's checked option and the map's own starting mode come from here together, so the
+// controls can't open out of step with what a first click actually does.
+const INITIAL_RIPPLE_MODE = MAP_RIPPLE_MODE.popNudge;
+const INITIAL_RIPPLE_REACH = MAP_RIPPLE_REACH.map;
+const INITIAL_RIPPLE_TRIGGER = MAP_RIPPLE_TRIGGER.click;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Balance of power</title>
+		{
+			FRANKLIN_WEIGHTS.map((weight) => (
+				<link
+					rel="preload"
+					as="font"
+					type="font/woff2"
+					href={franklinFontUrl(weight)}
+					crossorigin
+				/>
+			))
+		}
+	</head>
+	<body>
+		<main>
+			<div class="page">
+				<RippleSelector
+					mode={INITIAL_RIPPLE_MODE}
+					reach={INITIAL_RIPPLE_REACH}
+					trigger={INITIAL_RIPPLE_TRIGGER}
+				/>
+				<div class="widget">
+					<BalanceOfPower
+						activeId={PRESIDENT_CHAMBER_ID}
+						numberAnimationMode={NUMBER_ANIMATION_MODE.slide}
+						showSwitcher={false}
+					/>
+					<ElectoralTileMap
+						rippleMode={INITIAL_RIPPLE_MODE}
+						rippleReach={INITIAL_RIPPLE_REACH}
+						rippleTrigger={INITIAL_RIPPLE_TRIGGER}
+					/>
+				</div>
+			</div>
+		</main>
+
+		<style>
+			body {
+				margin: 0;
+				background: var(--bop-color-page);
+			}
+
+			main {
+				box-sizing: border-box;
+				display: flex;
+				/* "safe" falls back to top-alignment once the widget is taller than the viewport —
+				   plain center would otherwise center the overflow itself, pushing the top of the
+				   widget below the fold with no way to scroll up to it. */
+				align-items: safe center;
+				justify-content: center;
+				min-height: 100svh;
+				padding: 40px 16px;
+			}
+
+			.page {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 20px;
+				width: 100%;
+				max-width: var(--bop-map-width);
+			}
+
+			/* Left at 0 to match /map exactly — the selector's spacing above is the page's, not the
+			   widget's, so the bar and map sit together the same way on both pages. */
+			.widget {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 0px;
+				width: 100%;
+			}
+		</style>
+	</body>
+</html>
